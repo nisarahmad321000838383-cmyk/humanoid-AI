@@ -71,6 +71,7 @@ class ApiService {
 
   // Auth endpoints
   async register(data: RegisterData): Promise<AuthResponse> {
+    console.log('Registration data being sent:', data);
     const response = await this.api.post<AuthResponse>('/auth/register/', data);
     return response.data;
   }

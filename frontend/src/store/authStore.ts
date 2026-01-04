@@ -40,6 +40,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   register: async (data) => {
     set({ isLoading: true, error: null });
+    console.log('Register called with data:', data);
     try {
       const response = await apiService.register(data);
       localStorage.setItem('accessToken', response.tokens.access);
@@ -50,11 +51,25 @@ export const useAuthStore = create<AuthState>((set) => ({
         isLoading: false,
       });
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.username?.[0] ||
-        error.response?.data?.email?.[0] ||
-        error.response?.data?.password?.[0] ||
-        'Registration failed';
+      // Extract error message from various possible fields
+      const errorData = error.response?.data;
+      console.error('Registration error:', errorData);
+      let errorMessage = 'Registration failed';
+      
+      if (errorData) {
+        if (errorData.username) {
+          errorMessage = `Username: ${Array.isArray(errorData.username) ? errorData.username[0] : errorData.username}`;
+        } else if (errorData.email) {
+          errorMessage = `Email: ${Array.isArray(errorData.email) ? errorData.email[0] : errorData.email}`;
+        } else if (errorData.password) {
+          errorMessage = `Password: ${Array.isArray(errorData.password) ? errorData.password[0] : errorData.password}`;
+        } else if (errorData.password2) {
+          errorMessage = `Password confirmation: ${Array.isArray(errorData.password2) ? errorData.password2[0] : errorData.password2}`;
+        } else if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        }
+      }
+      
       set({ error: errorMessage, isLoading: false });
       throw error;
     }

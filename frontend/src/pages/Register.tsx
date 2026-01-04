@@ -1,8 +1,15 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
-import { UserPlus, Sparkles } from 'lucide-react';
+import { UserPlus, Sparkles, Check, X } from 'lucide-react';
 import './Auth.css';
+
+interface PasswordValidation {
+  minLength: boolean;
+  hasUpperCase: boolean;
+  hasNumber: boolean;
+  hasSpecialChar: boolean;
+}
 
 const Register = () => {
   const navigate = useNavigate();
@@ -15,6 +22,13 @@ const Register = () => {
     first_name: '',
     last_name: '',
   });
+  const [passwordValidation, setPasswordValidation] = useState<PasswordValidation>({
+    minLength: false,
+    hasUpperCase: false,
+    hasNumber: false,
+    hasSpecialChar: false,
+  });
+  const [showValidation, setShowValidation] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -26,10 +40,31 @@ const Register = () => {
     clearError();
   }, [clearError]);
 
+  useEffect(() => {
+    // Validate password in real-time
+    const password = formData.password;
+    setPasswordValidation({
+      minLength: password.length >= 8,
+      hasUpperCase: /[A-Z]/.test(password),
+      hasNumber: /[0-9]/.test(password),
+      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+    });
+  }, [formData.password]);
+
+  const isPasswordValid = 
+    passwordValidation.minLength &&
+    passwordValidation.hasUpperCase &&
+    passwordValidation.hasNumber &&
+    passwordValidation.hasSpecialChar;
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     
     if (formData.password !== formData.password2) {
+      return;
+    }
+
+    if (!isPasswordValid) {
       return;
     }
 
@@ -122,10 +157,31 @@ const Register = () => {
                 type="password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onFocus={() => setShowValidation(true)}
                 placeholder="Create a password"
                 required
                 autoComplete="new-password"
               />
+              {showValidation && formData.password && (
+                <div className="password-validation">
+                  <div className={`validation-item ${passwordValidation.minLength ? 'valid' : 'invalid'}`}>
+                    {passwordValidation.minLength ? <Check size={16} /> : <X size={16} />}
+                    <span>At least 8 characters</span>
+                  </div>
+                  <div className={`validation-item ${passwordValidation.hasUpperCase ? 'valid' : 'invalid'}`}>
+                    {passwordValidation.hasUpperCase ? <Check size={16} /> : <X size={16} />}
+                    <span>One uppercase letter</span>
+                  </div>
+                  <div className={`validation-item ${passwordValidation.hasNumber ? 'valid' : 'invalid'}`}>
+                    {passwordValidation.hasNumber ? <Check size={16} /> : <X size={16} />}
+                    <span>One number</span>
+                  </div>
+                  <div className={`validation-item ${passwordValidation.hasSpecialChar ? 'valid' : 'invalid'}`}>
+                    {passwordValidation.hasSpecialChar ? <Check size={16} /> : <X size={16} />}
+                    <span>One special character (!@#$%^&*...)</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="form-group">
@@ -150,7 +206,7 @@ const Register = () => {
             <button
               type="submit"
               className="auth-button"
-              disabled={isLoading || formData.password !== formData.password2}
+              disabled={isLoading || formData.password !== formData.password2 || !isPasswordValid}
             >
               {isLoading ? (
                 'Creating account...'
