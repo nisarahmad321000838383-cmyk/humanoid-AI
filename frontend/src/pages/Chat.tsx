@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useAuthStore } from '@/store/authStore';
 import { useChatStore } from '@/store/chatStore';
 import Sidebar from '@/components/Sidebar';
 import ChatArea from '@/components/ChatArea';
 import './Chat.css';
 
 const Chat = () => {
-  const { user } = useAuthStore();
-  const { loadConversations, currentConversation } = useChatStore();
+  const { loadConversations } = useChatStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {

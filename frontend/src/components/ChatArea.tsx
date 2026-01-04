@@ -117,14 +117,14 @@ const ChatArea = ({ isSidebarOpen, onToggleSidebar }: ChatAreaProps) => {
                   <div className="message-text">
                     <ReactMarkdown
                       components={{
-                        code({ node, inline, className, children, ...props }) {
+                        code({ className, children, ...props }: any) {
                           const match = /language-(\w+)/.exec(className || '');
-                          return !inline && match ? (
+                          const isInline = !match;
+                          return !isInline ? (
                             <SyntaxHighlighter
-                              style={vscDarkPlus}
-                              language={match[1]}
+                              style={vscDarkPlus as any}
+                              language={match ? match[1] : 'text'}
                               PreTag="div"
-                              {...props}
                             >
                               {String(children).replace(/\n$/, '')}
                             </SyntaxHighlighter>

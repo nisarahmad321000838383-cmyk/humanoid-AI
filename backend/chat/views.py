@@ -78,8 +78,9 @@ class ChatView(generics.GenericAPIView):
         )
         
         try:
-            # Get conversation history (last 10 messages for context)
-            history_messages = conversation.messages.order_by('created_at')[:-1][:10]
+            # Get conversation history (exclude current user message, get last 10 for context)
+            # We exclude the current message we just created
+            history_messages = conversation.messages.exclude(id=user_msg.id).order_by('created_at')[:10]
             conversation_history = [
                 {
                     'role': msg.role,
