@@ -174,9 +174,8 @@
   font-size: 0.9375rem;
   color: var(--color-text-primary);
   line-height: 1.6;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .message-text code {
