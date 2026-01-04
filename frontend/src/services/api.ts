@@ -91,8 +91,13 @@ class ApiService {
 
   // Chat endpoints
   async getConversations(): Promise<ConversationListItem[]> {
-    const response = await this.api.get<ConversationListItem[]>('/chat/conversations/');
-    return response.data;
+    const response = await this.api.get<any>('/chat/conversations/');
+    // Handle paginated response from DRF
+    if (response.data && typeof response.data === 'object' && 'results' in response.data) {
+      return response.data.results;
+    }
+    // Handle non-paginated response (array)
+    return Array.isArray(response.data) ? response.data : [];
   }
 
   async getConversation(id: number): Promise<Conversation> {
