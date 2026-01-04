@@ -44,3 +44,4 @@ class ChatRequestSerializer(serializers.Serializer):
     conversation_id = serializers.IntegerField(required=False, allow_null=True)
     message = serializers.CharField(required=True)
     title = serializers.CharField(required=False, allow_blank=True)
+    deep_dive = serializers.BooleanField(required=False, default=False)

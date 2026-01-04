@@ -60,6 +60,7 @@ export interface ChatRequest {
   conversation_id?: number;
   message: string;
   title?: string;
+  deep_dive?: boolean;
 }
 
 export interface ChatResponse {

@@ -39,7 +39,8 @@ If you're unsure about something, clearly state your uncertainty rather than gue
     def generate_response(
         self,
         user_message: str,
-        conversation_history: Optional[List[Dict[str, str]]] = None
+        conversation_history: Optional[List[Dict[str, str]]] = None,
+        deep_dive: bool = False
     ) -> str:
         """
         Generate a response using the Hugging Face Chat Completion API.
@@ -47,12 +48,40 @@ If you're unsure about something, clearly state your uncertainty rather than gue
         Args:
             user_message: The user's message
             conversation_history: Previous messages in the conversation
+            deep_dive: If True, enables deep thinking mode with detailed analysis
             
         Returns:
             The AI's response text
         """
+        # Choose system prompt based on deep dive mode
+        if deep_dive:
+            system_prompt = """You are Humanoid AI, an advanced AI assistant with the core principle of "No Hallucination". 
+
+DEEP DIVE MODE IS ENABLED - You should think deeply and provide comprehensive, detailed responses.
+
+Your responses must be:
+- Accurate and fact-based
+- Honest about limitations and uncertainties
+- Clear when you don't know something
+- Free from made-up information or false claims
+- Detailed, thorough, and comprehensive
+- Well-structured with clear explanations
+- Include reasoning, examples, and multiple perspectives when relevant
+
+In Deep Dive mode:
+- Take time to think through the question carefully
+- Provide detailed explanations with context
+- Include examples, analogies, or step-by-step breakdowns
+- Consider multiple angles and perspectives
+- Elaborate on key concepts
+- You may write longer responses (no strict line limit, but stay focused)
+
+If you're unsure about something, clearly state your uncertainty rather than guessing or fabricating information."""
+        else:
+            system_prompt = self.system_prompt
+        
         # Build messages list for Chat Completion API
-        messages = [{"role": "system", "content": self.system_prompt}]
+        messages = [{"role": "system", "content": system_prompt}]
         
         # Add conversation history if exists
         if conversation_history:
@@ -61,12 +90,16 @@ If you're unsure about something, clearly state your uncertainty rather than gue
         # Add current user message
         messages.append({"role": "user", "content": user_message})
         
+        # Adjust parameters based on deep dive mode
+        max_tokens = 3000 if deep_dive else 2000
+        temperature = 0.8 if deep_dive else 0.7
+        
         try:
             # Use the InferenceClient's chat_completion method
             response = self.client.chat_completion(
                 messages=messages,
-                max_tokens=2000,
-                temperature=0.7,
+                max_tokens=max_tokens,
+                temperature=temperature,
                 top_p=0.95,
                 stream=False
             )

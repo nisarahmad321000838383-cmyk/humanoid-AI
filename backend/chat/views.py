@@ -55,6 +55,7 @@ class ChatView(generics.GenericAPIView):
         conversation_id = serializer.validated_data.get('conversation_id')
         user_message = serializer.validated_data['message']
         title = serializer.validated_data.get('title', '')
+        deep_dive = serializer.validated_data.get('deep_dive', False)
         
         # Get or create conversation
         if conversation_id:
@@ -93,7 +94,8 @@ class ChatView(generics.GenericAPIView):
             hf_service = HuggingFaceService()
             ai_response = hf_service.generate_response(
                 user_message=user_message,
-                conversation_history=conversation_history
+                conversation_history=conversation_history,
+                deep_dive=deep_dive
             )
             
             # Save AI response

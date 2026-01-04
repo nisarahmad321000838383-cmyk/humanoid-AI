@@ -10,7 +10,7 @@ interface ChatState {
   error: string | null;
   loadConversations: () => Promise<void>;
   loadConversation: (id: number) => Promise<void>;
-  sendMessage: (message: string, conversationId?: number) => Promise<void>;
+  sendMessage: (message: string, conversationId?: number, deepDive?: boolean) => Promise<void>;
   deleteConversation: (id: number) => Promise<void>;
   createNewConversation: () => void;
   clearError: () => void;
@@ -49,13 +49,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  sendMessage: async (message, conversationId) => {
+  sendMessage: async (message, conversationId, deepDive = false) => {
     set({ isSending: true, error: null });
     try {
       const response = await apiService.sendMessage({
         message,
         conversation_id: conversationId,
         title: conversationId ? undefined : message.slice(0, 50),
+        deep_dive: deepDive,
       });
 
       set({

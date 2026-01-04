@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, FormEvent } from 'react';
 import { useChatStore } from '@/store/chatStore';
 import { useAuthStore } from '@/store/authStore';
-import { Send, Menu, Sparkles, Loader2 } from 'lucide-react';
+import { Send, Menu, Sparkles, Loader2, Brain } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -16,6 +16,7 @@ const ChatArea = ({ isSidebarOpen, onToggleSidebar }: ChatAreaProps) => {
   const { user } = useAuthStore();
   const { currentConversation, sendMessage, isSending, error } = useChatStore();
   const [input, setInput] = useState('');
+  const [deepDive, setDeepDive] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -42,7 +43,7 @@ const ChatArea = ({ isSidebarOpen, onToggleSidebar }: ChatAreaProps) => {
     setInput('');
 
     try {
-      await sendMessage(message, currentConversation?.id);
+      await sendMessage(message, currentConversation?.id, deepDive);
     } catch (error) {
       // Error handled by store
     }
@@ -168,13 +169,25 @@ const ChatArea = ({ isSidebarOpen, onToggleSidebar }: ChatAreaProps) => {
       )}
 
       <div className="chat-input-container">
+        <div className="chat-options">
+          <button
+            type="button"
+            className={`deep-dive-toggle ${deepDive ? 'active' : ''}`}
+            onClick={() => setDeepDive(!deepDive)}
+            title={deepDive ? 'Deep Dive Mode: ON - Detailed, thoughtful responses' : 'Deep Dive Mode: OFF - Quick, concise responses'}
+          >
+            <Brain size={18} />
+            <span>Deep Dive</span>
+            {deepDive && <span className="deep-dive-indicator">ON</span>}
+          </button>
+        </div>
         <form onSubmit={handleSubmit} className="chat-input-form">
           <textarea
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask me anything..."
+            placeholder={deepDive ? "Ask for a detailed, thoughtful analysis..." : "Ask me anything..."}
             rows={1}
             disabled={isSending}
           />
