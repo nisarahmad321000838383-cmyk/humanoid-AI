@@ -5,6 +5,7 @@ export interface User {
   first_name: string;
   last_name: string;
   role: 'admin' | 'user';
+  is_admin?: boolean;
   created_at: string;
 }
 
@@ -68,4 +69,42 @@ export interface ChatResponse {
   user_message: Message;
   ai_response: Message;
   conversation: Conversation;
+}
+
+export interface HuggingFaceToken {
+  id: number;
+  token?: string;
+  token_preview?: string;
+  name: string;
+  is_active: boolean;
+  created_by?: number;
+  created_by_username?: string;
+  assignment_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HuggingFaceTokenCreate {
+  token: string;
+  name: string;
+  is_active?: boolean;
+}
+
+export interface HuggingFaceTokenStats {
+  total_tokens: number;
+  active_tokens: number;
+  inactive_tokens: number;
+  active_assignments: number;
+}
+
+export interface UserHFTokenAssignment {
+  id: number;
+  user: number;
+  user_username: string;
+  hf_token: number;
+  token_name: string;
+  assigned_at: string;
+  released_at: string | null;
+  is_active: boolean;
+  session_identifier: string;
 }

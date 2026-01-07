@@ -12,6 +12,7 @@ import {
   Sparkles,
   User,
   Shield,
+  Settings as SettingsIcon,
 } from 'lucide-react';
 import './Sidebar.css';
 
@@ -132,6 +133,16 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                 </div>
               )}
             </div>
+          )}
+          {(user?.is_admin || user?.role === 'admin') && (
+            <button 
+              className="settings-button" 
+              onClick={() => navigate('/settings')} 
+              title="Settings"
+            >
+              <SettingsIcon size={20} />
+              {isOpen && <span>Settings</span>}
+            </button>
           )}
           <button className="logout-button" onClick={handleLogout} title="Logout">
             <LogOut size={20} />

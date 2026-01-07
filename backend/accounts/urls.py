@@ -1,6 +1,19 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import RegisterView, LoginView, CurrentUserView, LogoutView
+from .views import (
+    RegisterView, 
+    LoginView, 
+    CurrentUserView, 
+    LogoutView,
+    HuggingFaceTokenViewSet,
+    UserHFTokenAssignmentViewSet
+)
+
+# Create router for viewsets
+router = DefaultRouter()
+router.register(r'hf-tokens', HuggingFaceTokenViewSet, basename='hf-token')
+router.register(r'hf-assignments', UserHFTokenAssignmentViewSet, basename='hf-assignment')
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
@@ -8,4 +21,5 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='logout'),
     path('me/', CurrentUserView.as_view(), name='current-user'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
+    path('', include(router.urls)),
 ]

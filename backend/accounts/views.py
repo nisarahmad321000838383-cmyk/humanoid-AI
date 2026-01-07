@@ -1,10 +1,22 @@
-from rest_framework import generics, status
+from rest_framework import generics, status, viewsets
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate, get_user_model
-from .serializers import RegisterSerializer, LoginSerializer, UserSerializer
+from django.utils import timezone
+from django.db.models import Q
+from .serializers import (
+    RegisterSerializer, 
+    LoginSerializer, 
+    UserSerializer,
+    HuggingFaceTokenSerializer,
+    HuggingFaceTokenListSerializer,
+    UserHFTokenAssignmentSerializer
+)
 from .permissions import IsAdminUser
+from .models import HuggingFaceToken, UserHFTokenAssignment
+import random
 
 User = get_user_model()
 
@@ -39,7 +51,7 @@ class RegisterView(generics.CreateAPIView):
 class LoginView(generics.GenericAPIView):
     """
     API endpoint for user login.
-    Validates role from backend.
+    Validates role from backend and assigns HuggingFace token.
     """
     permission_classes = (AllowAny,)
     serializer_class = LoginSerializer
@@ -68,6 +80,11 @@ class LoginView(generics.GenericAPIView):
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
         
+        # Assign HuggingFace token for this session
+        # Use the refresh token's jti (JWT ID) as session identifier
+        session_id = str(refresh['jti'])
+        self._assign_hf_token(user, session_id)
+        
         return Response({
             'user': UserSerializer(user).data,
             'tokens': {
@@ -76,6 +93,38 @@ class LoginView(generics.GenericAPIView):
             },
             'message': 'Login successful'
         }, status=status.HTTP_200_OK)
+    
+    def _assign_hf_token(self, user, session_id):
+        """
+        Assign an available HuggingFace token to the user for this session.
+        Uses round-robin selection among available tokens.
+        """
+        # Get all active HF tokens
+        available_tokens = HuggingFaceToken.objects.filter(is_active=True)
+        
+        if not available_tokens.exists():
+            # No tokens available, will use fallback in settings
+            return None
+        
+        # Find the token with the least active assignments (load balancing)
+        token_usage = []
+        for token in available_tokens:
+            active_count = token.assignments.filter(is_active=True).count()
+            token_usage.append((token, active_count))
+        
+        # Sort by usage and pick the least used one
+        token_usage.sort(key=lambda x: x[1])
+        selected_token = token_usage[0][0]
+        
+        # Create assignment
+        UserHFTokenAssignment.objects.create(
+            user=user,
+            hf_token=selected_token,
+            session_identifier=session_id,
+            is_active=True
+        )
+        
+        return selected_token
 
 
 class CurrentUserView(generics.RetrieveAPIView):
@@ -91,7 +140,7 @@ class CurrentUserView(generics.RetrieveAPIView):
 
 class LogoutView(generics.GenericAPIView):
     """
-    API endpoint for user logout (blacklist refresh token).
+    API endpoint for user logout (blacklist refresh token and release HF token).
     """
     permission_classes = (IsAuthenticated,)
     
@@ -100,6 +149,11 @@ class LogoutView(generics.GenericAPIView):
             refresh_token = request.data.get('refresh_token')
             if refresh_token:
                 token = RefreshToken(refresh_token)
+                
+                # Release HuggingFace token assignment for this session
+                session_id = str(token['jti'])
+                self._release_hf_token(request.user, session_id)
+                
                 token.blacklist()
             return Response(
                 {'message': 'Logout successful'},
@@ -110,3 +164,102 @@ class LogoutView(generics.GenericAPIView):
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+    
+    def _release_hf_token(self, user, session_id):
+        """
+        Release the HuggingFace token assignment for this session.
+        """
+        UserHFTokenAssignment.objects.filter(
+            user=user,
+            session_identifier=session_id,
+            is_active=True
+        ).update(
+            is_active=False,
+            released_at=timezone.now()
+        )
+
+
+class HuggingFaceTokenViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing HuggingFace tokens.
+    Only admin users can access these endpoints.
+    """
+    permission_classes = (IsAuthenticated, IsAdminUser)
+    queryset = HuggingFaceToken.objects.all()
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return HuggingFaceTokenListSerializer
+        return HuggingFaceTokenSerializer
+    
+    def perform_create(self, serializer):
+        """Automatically set the created_by field to current user."""
+        serializer.save(created_by=self.request.user)
+    
+    @action(detail=True, methods=['post'])
+    def toggle_active(self, request, pk=None):
+        """
+        Toggle the is_active status of a token.
+        """
+        token = self.get_object()
+        token.is_active = not token.is_active
+        token.save()
+        
+        serializer = self.get_serializer(token)
+        return Response({
+            'message': f'Token {"activated" if token.is_active else "deactivated"} successfully',
+            'token': serializer.data
+        })
+    
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        """
+        Get statistics about token usage.
+        """
+        total_tokens = HuggingFaceToken.objects.count()
+        active_tokens = HuggingFaceToken.objects.filter(is_active=True).count()
+        total_assignments = UserHFTokenAssignment.objects.filter(is_active=True).count()
+        
+        return Response({
+            'total_tokens': total_tokens,
+            'active_tokens': active_tokens,
+            'inactive_tokens': total_tokens - active_tokens,
+            'active_assignments': total_assignments
+        })
+
+
+class UserHFTokenAssignmentViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for viewing HuggingFace token assignments.
+    Admin users can view all assignments.
+    Regular users can only view their own assignments.
+    """
+    permission_classes = (IsAuthenticated,)
+    serializer_class = UserHFTokenAssignmentSerializer
+    
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_admin:
+            # Admin can see all assignments
+            return UserHFTokenAssignment.objects.all()
+        else:
+            # Regular users can only see their own assignments
+            return UserHFTokenAssignment.objects.filter(user=user)
+    
+    @action(detail=False, methods=['get'])
+    def current(self, request):
+        """
+        Get the current active HF token assignment for the logged-in user.
+        """
+        assignment = UserHFTokenAssignment.objects.filter(
+            user=request.user,
+            is_active=True
+        ).select_related('hf_token').first()
+        
+        if assignment:
+            serializer = self.get_serializer(assignment)
+            return Response(serializer.data)
+        else:
+            return Response({
+                'message': 'No active HuggingFace token assigned'
+            }, status=status.HTTP_404_NOT_FOUND)

@@ -9,14 +9,44 @@ class HuggingFaceService:
     Using Qwen/Qwen3-235B-A22B model for chat completion.
     """
     
-    def __init__(self):
-        self.api_token = settings.HUGGINGFACE_API_TOKEN
+    def __init__(self, user=None):
+        """
+        Initialize the HuggingFace service.
+        
+        Args:
+            user: The user making the request. If provided, will use their assigned HF token.
+        """
+        self.user = user
         self.model = settings.HUGGINGFACE_MODEL
+        
+        # Get the appropriate API token
+        self.api_token = self._get_api_token()
+        
         # Use the Hugging Face InferenceClient for Chat Completion API
         self.client = InferenceClient(
             model=self.model,
             token=self.api_token
         )
+    
+    def _get_api_token(self):
+        """
+        Get the appropriate HuggingFace API token for the user.
+        Uses assigned token if available, otherwise falls back to settings.
+        """
+        if self.user:
+            from accounts.models import UserHFTokenAssignment
+            
+            # Get the active assignment for this user
+            assignment = UserHFTokenAssignment.objects.filter(
+                user=self.user,
+                is_active=True
+            ).select_related('hf_token').first()
+            
+            if assignment and assignment.hf_token.is_active:
+                return assignment.hf_token.token
+        
+        # Fallback to settings token
+        return settings.HUGGINGFACE_API_TOKEN
         # System prompt emphasizing no hallucination and response length limits
         self.system_prompt = """You are Humanoid AI, an advanced AI assistant with the core principle of "No Hallucination". 
 

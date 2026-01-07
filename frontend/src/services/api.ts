@@ -8,6 +8,10 @@ import type {
   ConversationListItem,
   ChatRequest,
   ChatResponse,
+  HuggingFaceToken,
+  HuggingFaceTokenCreate,
+  HuggingFaceTokenStats,
+  UserHFTokenAssignment,
 } from '@/types';
 
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -112,6 +116,51 @@ class ApiService {
 
   async sendMessage(data: ChatRequest): Promise<ChatResponse> {
     const response = await this.api.post<ChatResponse>('/chat/chat/', data);
+    return response.data;
+  }
+
+  // HuggingFace Token Management endpoints
+  async getHFTokens(): Promise<HuggingFaceToken[]> {
+    const response = await this.api.get<HuggingFaceToken[]>('/auth/hf-tokens/');
+    return response.data;
+  }
+
+  async getHFToken(id: number): Promise<HuggingFaceToken> {
+    const response = await this.api.get<HuggingFaceToken>(`/auth/hf-tokens/${id}/`);
+    return response.data;
+  }
+
+  async createHFToken(data: HuggingFaceTokenCreate): Promise<HuggingFaceToken> {
+    const response = await this.api.post<HuggingFaceToken>('/auth/hf-tokens/', data);
+    return response.data;
+  }
+
+  async updateHFToken(id: number, data: Partial<HuggingFaceTokenCreate>): Promise<HuggingFaceToken> {
+    const response = await this.api.patch<HuggingFaceToken>(`/auth/hf-tokens/${id}/`, data);
+    return response.data;
+  }
+
+  async deleteHFToken(id: number): Promise<void> {
+    await this.api.delete(`/auth/hf-tokens/${id}/`);
+  }
+
+  async toggleHFTokenActive(id: number): Promise<{ message: string; token: HuggingFaceToken }> {
+    const response = await this.api.post(`/auth/hf-tokens/${id}/toggle_active/`);
+    return response.data;
+  }
+
+  async getHFTokenStats(): Promise<HuggingFaceTokenStats> {
+    const response = await this.api.get<HuggingFaceTokenStats>('/auth/hf-tokens/stats/');
+    return response.data;
+  }
+
+  async getCurrentHFAssignment(): Promise<UserHFTokenAssignment> {
+    const response = await this.api.get<UserHFTokenAssignment>('/auth/hf-assignments/current/');
+    return response.data;
+  }
+
+  async getHFAssignments(): Promise<UserHFTokenAssignment[]> {
+    const response = await this.api.get<UserHFTokenAssignment[]>('/auth/hf-assignments/');
     return response.data;
   }
 }

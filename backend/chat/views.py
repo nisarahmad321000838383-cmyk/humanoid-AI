@@ -90,8 +90,8 @@ class ChatView(generics.GenericAPIView):
                 for msg in history_messages
             ]
             
-            # Generate AI response
-            hf_service = HuggingFaceService()
+            # Generate AI response with user's assigned HF token
+            hf_service = HuggingFaceService(user=request.user)
             ai_response = hf_service.generate_response(
                 user_message=user_message,
                 conversation_history=conversation_history,
