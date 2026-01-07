@@ -121,8 +121,13 @@ class ApiService {
 
   // HuggingFace Token Management endpoints
   async getHFTokens(): Promise<HuggingFaceToken[]> {
-    const response = await this.api.get<HuggingFaceToken[]>('/auth/hf-tokens/');
-    return response.data;
+    const response = await this.api.get<any>('/auth/hf-tokens/');
+    // Handle paginated response from DRF
+    if (response.data && typeof response.data === 'object' && 'results' in response.data) {
+      return response.data.results;
+    }
+    // Handle non-paginated response (array)
+    return Array.isArray(response.data) ? response.data : [];
   }
 
   async getHFToken(id: number): Promise<HuggingFaceToken> {
