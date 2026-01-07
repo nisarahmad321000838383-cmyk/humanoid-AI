@@ -139,10 +139,10 @@ REST_FRAMEWORK = {
 
 # JWT Settings
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),  # 15 minutes for access token
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),  # 7 days for refresh token
+    'ROTATE_REFRESH_TOKENS': False,  # We manage tokens in our own table
+    'BLACKLIST_AFTER_ROTATION': False,  # We use our own auth_tokens table
     'UPDATE_LAST_LOGIN': True,
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,

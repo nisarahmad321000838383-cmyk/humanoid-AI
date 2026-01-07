@@ -97,13 +97,17 @@ export const useAuthStore = create<AuthState>((set) => ({
         isAuthenticated: true,
         isLoading: false,
       });
-    } catch (error) {
+    } catch (error: any) {
       // No valid token cookie or token expired
+      // Professional approach: Clean up state
       set({
         user: null,
         isAuthenticated: false,
         isLoading: false,
       });
+      
+      // If we get 401, it means tokens are invalid - let the API interceptor handle it
+      // No need to manually redirect here
     }
   },
 

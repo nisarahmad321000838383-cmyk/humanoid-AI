@@ -49,8 +49,9 @@ class ApiService {
             // Retry the original request
             return this.api(originalRequest);
           } catch (refreshError) {
-            // Refresh failed, redirect to login
-            window.location.href = '/login';
+            // Refresh failed - clear invalid cookies and redirect to login
+            // Professional approach: Clean up client-side state
+            await this.clearAuthState();
             return Promise.reject(refreshError);
           }
         }
@@ -58,6 +59,29 @@ class ApiService {
         return Promise.reject(error);
       }
     );
+  }
+
+  /**
+   * Clear authentication state on the client side.
+   * Professional approach: When tokens are invalid, clean up everything.
+   */
+  private async clearAuthState(): Promise<void> {
+    try {
+      // Call backend to clear cookies properly (HTTP-only cookies can't be cleared by JS)
+      await axios.post(
+        `${API_BASE_URL}/auth/clear-cookies/`,
+        {},
+        { withCredentials: true }
+      );
+    } catch (error) {
+      // If backend call fails, that's okay - just redirect
+      console.error('Failed to clear cookies on backend:', error);
+    } finally {
+      // Always redirect to login
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        window.location.href = '/login';
+      }
+    }
   }
 
   // Auth endpoints

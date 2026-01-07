@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, HuggingFaceToken, UserHFTokenAssignment
+from .models import User, HuggingFaceToken, UserHFTokenAssignment, AuthToken
 
 
 @admin.register(User)
@@ -60,3 +60,41 @@ class UserHFTokenAssignmentAdmin(admin.ModelAdmin):
         ('Session Information', {'fields': ('session_identifier',)}),
         ('Timestamps', {'fields': ('assigned_at', 'released_at')}),
     )
+
+
+@admin.register(AuthToken)
+class AuthTokenAdmin(admin.ModelAdmin):
+    """Admin interface for AuthToken model."""
+    list_display = ['user', 'token_type', 'jti_short', 'created_at', 'expires_at', 'is_revoked', 'is_valid']
+    list_filter = ['token_type', 'is_revoked', 'created_at', 'expires_at']
+    search_fields = ['user__username', 'user__email', 'jti', 'ip_address']
+    readonly_fields = ['token_hash', 'jti', 'created_at', 'expires_at', 'revoked_at', 'ip_address', 'user_agent']
+    date_hierarchy = 'created_at'
+    
+    def jti_short(self, obj):
+        """Display shortened JTI for readability."""
+        return obj.jti[:16] + '...' if len(obj.jti) > 16 else obj.jti
+    jti_short.short_description = 'JWT ID'
+    
+    def is_valid(self, obj):
+        """Display if token is currently valid."""
+        return obj.is_valid()
+    is_valid.boolean = True
+    is_valid.short_description = 'Valid'
+    
+    actions = ['revoke_tokens', 'cleanup_expired']
+    
+    def revoke_tokens(self, request, queryset):
+        """Admin action to revoke selected tokens."""
+        count = 0
+        for token in queryset:
+            token.revoke()
+            count += 1
+        self.message_user(request, f"Successfully revoked {count} token(s).")
+    revoke_tokens.short_description = "Revoke selected tokens"
+    
+    def cleanup_expired(self, request, queryset):
+        """Admin action to delete old expired/revoked tokens."""
+        count = AuthToken.cleanup_expired_tokens(days_to_keep=30)
+        self.message_user(request, f"Successfully cleaned up {count} expired token(s).")
+    cleanup_expired.short_description = "Cleanup expired tokens (30+ days old)"

@@ -21,6 +21,63 @@ import random
 User = get_user_model()
 
 
+def get_client_ip(request):
+    """Extract client IP address from request."""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+
+def get_user_agent(request):
+    """Extract user agent from request."""
+    return request.META.get('HTTP_USER_AGENT', '')
+
+
+def save_token_to_db(user, token, token_type, request, refresh_token_obj=None):
+    """
+    Save authentication token to database for tracking and auditing.
+    
+    Args:
+        user: User object
+        token: The JWT token string
+        token_type: 'access' or 'refresh'
+        request: HTTP request object
+        refresh_token_obj: Parent refresh token (for access tokens)
+    
+    Returns:
+        AuthToken object
+    """
+    from rest_framework_simplejwt.tokens import AccessToken, RefreshToken as RefreshTokenClass
+    from .models import AuthToken
+    
+    # Decode token to get jti and expiry
+    if token_type == 'access':
+        decoded = AccessToken(token)
+    else:
+        decoded = RefreshTokenClass(token)
+    
+    jti = str(decoded['jti'])
+    exp = decoded['exp']
+    expires_at = timezone.datetime.fromtimestamp(exp, tz=timezone.get_current_timezone())
+    
+    # Create token record
+    auth_token = AuthToken.objects.create(
+        user=user,
+        token_type=token_type,
+        token_hash=AuthToken.hash_token(token),
+        jti=jti,
+        ip_address=get_client_ip(request),
+        user_agent=get_user_agent(request),
+        expires_at=expires_at,
+        refresh_token=refresh_token_obj
+    )
+    
+    return auth_token
+
+
 class RegisterView(generics.CreateAPIView):
     """
     API endpoint for user registration.
@@ -37,6 +94,13 @@ class RegisterView(generics.CreateAPIView):
         
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
+        access_token_str = str(refresh.access_token)
+        refresh_token_str = str(refresh)
+        
+        # Save tokens to database
+        from .models import AuthToken
+        refresh_token_obj = save_token_to_db(user, refresh_token_str, 'refresh', request)
+        save_token_to_db(user, access_token_str, 'access', request, refresh_token_obj)
         
         response = Response({
             'user': UserSerializer(user).data,
@@ -44,7 +108,7 @@ class RegisterView(generics.CreateAPIView):
         }, status=status.HTTP_201_CREATED)
         
         # Set tokens in HTTP-only cookies
-        self._set_token_cookies(response, str(refresh.access_token), str(refresh))
+        self._set_token_cookies(response, access_token_str, refresh_token_str)
         
         return response
     
@@ -133,11 +197,18 @@ class LoginView(generics.GenericAPIView):
         
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
+        access_token_str = str(refresh.access_token)
+        refresh_token_str = str(refresh)
         
         # Assign HuggingFace token for this session
         # Use the refresh token's jti (JWT ID) as session identifier
         session_id = str(refresh['jti'])
         self._assign_hf_token(user, session_id)
+        
+        # Save tokens to database
+        from .models import AuthToken
+        refresh_token_obj = save_token_to_db(user, refresh_token_str, 'refresh', request)
+        save_token_to_db(user, access_token_str, 'access', request, refresh_token_obj)
         
         response = Response({
             'user': UserSerializer(user).data,
@@ -145,7 +216,7 @@ class LoginView(generics.GenericAPIView):
         }, status=status.HTTP_200_OK)
         
         # Set tokens in HTTP-only cookies
-        self._set_token_cookies(response, str(refresh.access_token), str(refresh))
+        self._set_token_cookies(response, access_token_str, refresh_token_str)
         
         return response
     
@@ -229,18 +300,36 @@ class TokenRefreshView(generics.GenericAPIView):
     def post(self, request):
         try:
             from rest_framework_simplejwt.tokens import RefreshToken
+            from .models import AuthToken
             
             # Get refresh token from cookie
-            refresh_token = request.COOKIES.get('refresh_token')
-            if not refresh_token:
+            refresh_token_str = request.COOKIES.get('refresh_token')
+            if not refresh_token_str:
                 return Response(
                     {'error': 'Refresh token not found'},
                     status=status.HTTP_401_UNAUTHORIZED
                 )
             
+            # Validate the refresh token exists and is valid in database
+            refresh_token_hash = AuthToken.hash_token(refresh_token_str)
+            db_refresh_token = AuthToken.objects.filter(
+                token_hash=refresh_token_hash,
+                token_type='refresh',
+                is_revoked=False
+            ).first()
+            
+            if not db_refresh_token or not db_refresh_token.is_valid():
+                return Response(
+                    {'error': 'Invalid or expired refresh token'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            
             # Validate and refresh the token
-            token = RefreshToken(refresh_token)
+            token = RefreshToken(refresh_token_str)
             new_access_token = str(token.access_token)
+            
+            # Save new access token to database
+            save_token_to_db(db_refresh_token.user, new_access_token, 'access', request, db_refresh_token)
             
             response = Response({
                 'message': 'Token refreshed successfully'
@@ -266,6 +355,27 @@ class TokenRefreshView(generics.GenericAPIView):
             )
 
 
+class ClearCookiesView(generics.GenericAPIView):
+    """
+    Endpoint to clear authentication cookies.
+    Professional approach: When tokens are invalid/expired, provide a way to clean them up.
+    This endpoint doesn't require authentication (since tokens might be invalid).
+    """
+    permission_classes = (AllowAny,)
+    
+    def post(self, request):
+        response = Response(
+            {'message': 'Cookies cleared successfully'},
+            status=status.HTTP_200_OK
+        )
+        
+        # Clear the cookies
+        response.delete_cookie('access_token', path='/')
+        response.delete_cookie('refresh_token', path='/')
+        
+        return response
+
+
 class LogoutView(generics.GenericAPIView):
     """
     API endpoint for user logout (blacklist refresh token and release HF token).
@@ -274,16 +384,30 @@ class LogoutView(generics.GenericAPIView):
     
     def post(self, request):
         try:
+            from .models import AuthToken
+            
             # Get refresh token from cookie instead of request body
-            refresh_token = request.COOKIES.get('refresh_token')
-            if refresh_token:
-                token = RefreshToken(refresh_token)
+            refresh_token_str = request.COOKIES.get('refresh_token')
+            if refresh_token_str:
+                token = RefreshToken(refresh_token_str)
                 
                 # Release HuggingFace token assignment for this session
                 session_id = str(token['jti'])
                 self._release_hf_token(request.user, session_id)
                 
-                token.blacklist()
+                # Delete tokens from database (both access and refresh)
+                # Find the refresh token in DB and delete it along with all related access tokens
+                refresh_token_hash = AuthToken.hash_token(refresh_token_str)
+                db_refresh_token = AuthToken.objects.filter(
+                    token_hash=refresh_token_hash,
+                    token_type='refresh'
+                ).first()
+                
+                if db_refresh_token:
+                    # Delete all access tokens created from this refresh token
+                    db_refresh_token.access_tokens.all().delete()
+                    # Delete the refresh token itself
+                    db_refresh_token.delete()
             
             response = Response(
                 {'message': 'Logout successful'},

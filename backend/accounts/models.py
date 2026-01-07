@@ -105,3 +105,7 @@ class UserHFTokenAssignment(models.Model):
     def __str__(self):
         status = 'Active' if self.is_active else 'Released'
         return f"{self.user.username} - {self.hf_token.name} - {status}"
+# Re-export AuthToken from models_token
+from .models_token import AuthToken
+
+__all__ = ['User', 'HuggingFaceToken', 'UserHFTokenAssignment', 'AuthToken']
