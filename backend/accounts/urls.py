@@ -6,6 +6,7 @@ from .views import (
     LoginView, 
     CurrentUserView, 
     LogoutView,
+    CheckAvailabilityView,
     HuggingFaceTokenViewSet,
     UserHFTokenAssignmentViewSet
 )
@@ -20,6 +21,7 @@ urlpatterns = [
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('me/', CurrentUserView.as_view(), name='current-user'),
+    path('check-availability/', CheckAvailabilityView.as_view(), name='check-availability'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path('', include(router.urls)),
 ]

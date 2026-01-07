@@ -201,6 +201,29 @@
   flex: 1;
 }
 
+.input-error {
+  border-color: rgba(239, 68, 68, 0.5) !important;
+}
+
+.input-error:focus {
+  border-color: rgba(239, 68, 68, 0.7) !important;
+}
+
+.error-text {
+  color: var(--color-error);
+  font-size: 0.8125rem;
+  margin-top: -0.25rem;
+  display: block;
+}
+
+.checking-text {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  margin-top: -0.25rem;
+  display: block;
+  font-style: italic;
+}
+
 @media (max-width: 640px) {
   .auth-container {
     padding: 1rem;

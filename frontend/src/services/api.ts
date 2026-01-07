@@ -94,6 +94,16 @@ class ApiService {
     return response.data;
   }
 
+  async checkAvailability(data: { username?: string; email?: string }): Promise<{
+    username_available?: boolean;
+    username_message?: string;
+    email_available?: boolean;
+    email_message?: string;
+  }> {
+    const response = await this.api.post('/auth/check-availability/', data);
+    return response.data;
+  }
+
   // Chat endpoints
   async getConversations(): Promise<ConversationListItem[]> {
     const response = await this.api.get<any>('/chat/conversations/');

@@ -48,6 +48,33 @@ class RegisterView(generics.CreateAPIView):
         }, status=status.HTTP_201_CREATED)
 
 
+class CheckAvailabilityView(generics.GenericAPIView):
+    """
+    API endpoint to check if username or email is available.
+    """
+    permission_classes = (AllowAny,)
+    
+    def post(self, request, *args, **kwargs):
+        username = request.data.get('username')
+        email = request.data.get('email')
+        
+        response_data = {}
+        
+        if username:
+            username_exists = User.objects.filter(username=username).exists()
+            response_data['username_available'] = not username_exists
+            if username_exists:
+                response_data['username_message'] = 'This username is already taken. Please try another one.'
+        
+        if email:
+            email_exists = User.objects.filter(email=email).exists()
+            response_data['email_available'] = not email_exists
+            if email_exists:
+                response_data['email_message'] = 'This email is already taken. Please try another one.'
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
 class LoginView(generics.GenericAPIView):
     """
     API endpoint for user login.

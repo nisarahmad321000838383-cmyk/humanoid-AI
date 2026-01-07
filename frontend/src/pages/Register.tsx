@@ -2,6 +2,7 @@ import { useState, FormEvent, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { UserPlus, Sparkles, Check, X } from 'lucide-react';
+import { apiService } from '@/services/api';
 import './Auth.css';
 
 interface PasswordValidation {
@@ -29,6 +30,10 @@ const Register = () => {
     hasSpecialChar: false,
   });
   const [showValidation, setShowValidation] = useState(false);
+  const [usernameError, setUsernameError] = useState<string>('');
+  const [emailError, setEmailError] = useState<string>('');
+  const [checkingUsername, setCheckingUsername] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -50,6 +55,60 @@ const Register = () => {
       hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password),
     });
   }, [formData.password]);
+
+  // Check username availability in real-time
+  useEffect(() => {
+    const checkUsername = async () => {
+      if (!formData.username || formData.username.length < 3) {
+        setUsernameError('');
+        return;
+      }
+
+      setCheckingUsername(true);
+      try {
+        const result = await apiService.checkAvailability({ username: formData.username });
+        if (result.username_available === false) {
+          setUsernameError(result.username_message || 'This username is already taken. Please try another one.');
+        } else {
+          setUsernameError('');
+        }
+      } catch (error) {
+        console.error('Error checking username:', error);
+      } finally {
+        setCheckingUsername(false);
+      }
+    };
+
+    const timeoutId = setTimeout(checkUsername, 500); // Debounce for 500ms
+    return () => clearTimeout(timeoutId);
+  }, [formData.username]);
+
+  // Check email availability in real-time
+  useEffect(() => {
+    const checkEmail = async () => {
+      if (!formData.email || !formData.email.includes('@')) {
+        setEmailError('');
+        return;
+      }
+
+      setCheckingEmail(true);
+      try {
+        const result = await apiService.checkAvailability({ email: formData.email });
+        if (result.email_available === false) {
+          setEmailError(result.email_message || 'This email is already taken. Please try another one.');
+        } else {
+          setEmailError('');
+        }
+      } catch (error) {
+        console.error('Error checking email:', error);
+      } finally {
+        setCheckingEmail(false);
+      }
+    };
+
+    const timeoutId = setTimeout(checkEmail, 500); // Debounce for 500ms
+    return () => clearTimeout(timeoutId);
+  }, [formData.email]);
 
   const isPasswordValid = 
     passwordValidation.minLength &&
@@ -134,7 +193,10 @@ const Register = () => {
                 placeholder="Choose a username"
                 required
                 autoComplete="username"
+                className={usernameError ? 'input-error' : ''}
               />
+              {checkingUsername && <small className="checking-text">Checking availability...</small>}
+              {usernameError && <small className="error-text">{usernameError}</small>}
             </div>
 
             <div className="form-group">
@@ -147,7 +209,10 @@ const Register = () => {
                 placeholder="your.email@example.com"
                 required
                 autoComplete="email"
+                className={emailError ? 'input-error' : ''}
               />
+              {checkingEmail && <small className="checking-text">Checking availability...</small>}
+              {emailError && <small className="error-text">{emailError}</small>}
             </div>
 
             <div className="form-group">
@@ -206,7 +271,7 @@ const Register = () => {
             <button
               type="submit"
               className="auth-button"
-              disabled={isLoading || formData.password !== formData.password2 || !isPasswordValid}
+              disabled={isLoading || formData.password !== formData.password2 || !isPasswordValid || !!usernameError || !!emailError || checkingUsername || checkingEmail}
             >
               {isLoading ? (
                 'Creating account...'
