@@ -1,11 +1,12 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenRefreshView
+# Import custom TokenRefreshView from views instead of simplejwt
 from .views import (
     RegisterView, 
     LoginView, 
     CurrentUserView, 
     LogoutView,
+    TokenRefreshView,
     CheckAvailabilityView,
     HuggingFaceTokenViewSet,
     UserHFTokenAssignmentViewSet

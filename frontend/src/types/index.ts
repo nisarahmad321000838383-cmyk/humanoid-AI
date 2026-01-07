@@ -11,11 +11,8 @@ export interface User {
 
 export interface AuthResponse {
   user: User;
-  tokens: {
-    access: string;
-    refresh: string;
-  };
   message: string;
+  // Tokens are now stored in HTTP-only cookies, not in the response
 }
 
 export interface LoginCredentials {

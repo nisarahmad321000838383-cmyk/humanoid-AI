@@ -38,14 +38,41 @@ class RegisterView(generics.CreateAPIView):
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
         
-        return Response({
+        response = Response({
             'user': UserSerializer(user).data,
-            'tokens': {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-            },
             'message': 'User registered successfully'
         }, status=status.HTTP_201_CREATED)
+        
+        # Set tokens in HTTP-only cookies
+        self._set_token_cookies(response, str(refresh.access_token), str(refresh))
+        
+        return response
+    
+    def _set_token_cookies(self, response, access_token, refresh_token):
+        """Set JWT tokens in secure HTTP-only cookies."""
+        from django.conf import settings
+        
+        # Access token cookie
+        response.set_cookie(
+            key='access_token',
+            value=access_token,
+            max_age=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds(),
+            httponly=True,
+            secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', False),
+            samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_SAMESITE', 'Lax'),
+            path='/',
+        )
+        
+        # Refresh token cookie
+        response.set_cookie(
+            key='refresh_token',
+            value=refresh_token,
+            max_age=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds(),
+            httponly=True,
+            secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', False),
+            samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_SAMESITE', 'Lax'),
+            path='/',
+        )
 
 
 class CheckAvailabilityView(generics.GenericAPIView):
@@ -112,14 +139,41 @@ class LoginView(generics.GenericAPIView):
         session_id = str(refresh['jti'])
         self._assign_hf_token(user, session_id)
         
-        return Response({
+        response = Response({
             'user': UserSerializer(user).data,
-            'tokens': {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-            },
             'message': 'Login successful'
         }, status=status.HTTP_200_OK)
+        
+        # Set tokens in HTTP-only cookies
+        self._set_token_cookies(response, str(refresh.access_token), str(refresh))
+        
+        return response
+    
+    def _set_token_cookies(self, response, access_token, refresh_token):
+        """Set JWT tokens in secure HTTP-only cookies."""
+        from django.conf import settings
+        
+        # Access token cookie
+        response.set_cookie(
+            key='access_token',
+            value=access_token,
+            max_age=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds(),
+            httponly=True,
+            secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', False),
+            samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_SAMESITE', 'Lax'),
+            path='/',
+        )
+        
+        # Refresh token cookie
+        response.set_cookie(
+            key='refresh_token',
+            value=refresh_token,
+            max_age=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds(),
+            httponly=True,
+            secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', False),
+            samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_SAMESITE', 'Lax'),
+            path='/',
+        )
     
     def _assign_hf_token(self, user, session_id):
         """
@@ -165,6 +219,53 @@ class CurrentUserView(generics.RetrieveAPIView):
         return self.request.user
 
 
+class TokenRefreshView(generics.GenericAPIView):
+    """
+    Custom token refresh view that reads refresh token from cookies
+    and returns new access token in cookies.
+    """
+    permission_classes = (AllowAny,)
+    
+    def post(self, request):
+        try:
+            from rest_framework_simplejwt.tokens import RefreshToken
+            
+            # Get refresh token from cookie
+            refresh_token = request.COOKIES.get('refresh_token')
+            if not refresh_token:
+                return Response(
+                    {'error': 'Refresh token not found'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            
+            # Validate and refresh the token
+            token = RefreshToken(refresh_token)
+            new_access_token = str(token.access_token)
+            
+            response = Response({
+                'message': 'Token refreshed successfully'
+            }, status=status.HTTP_200_OK)
+            
+            # Set new access token in cookie
+            from django.conf import settings
+            response.set_cookie(
+                key='access_token',
+                value=new_access_token,
+                max_age=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds(),
+                httponly=True,
+                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', False),
+                samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_SAMESITE', 'Lax'),
+                path='/',
+            )
+            
+            return response
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+
 class LogoutView(generics.GenericAPIView):
     """
     API endpoint for user logout (blacklist refresh token and release HF token).
@@ -173,7 +274,8 @@ class LogoutView(generics.GenericAPIView):
     
     def post(self, request):
         try:
-            refresh_token = request.data.get('refresh_token')
+            # Get refresh token from cookie instead of request body
+            refresh_token = request.COOKIES.get('refresh_token')
             if refresh_token:
                 token = RefreshToken(refresh_token)
                 
@@ -182,10 +284,17 @@ class LogoutView(generics.GenericAPIView):
                 self._release_hf_token(request.user, session_id)
                 
                 token.blacklist()
-            return Response(
+            
+            response = Response(
                 {'message': 'Logout successful'},
                 status=status.HTTP_200_OK
             )
+            
+            # Clear the cookies
+            response.delete_cookie('access_token', path='/')
+            response.delete_cookie('refresh_token', path='/')
+            
+            return response
         except Exception as e:
             return Response(
                 {'error': str(e)},

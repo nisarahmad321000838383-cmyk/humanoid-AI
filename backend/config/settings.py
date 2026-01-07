@@ -128,7 +128,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'accounts.authentication.CookieJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
@@ -150,6 +150,14 @@ SIMPLE_JWT = {
     'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
+    # Cookie-based token storage
+    'AUTH_COOKIE': 'access_token',  # Name of access token cookie
+    'AUTH_COOKIE_REFRESH': 'refresh_token',  # Name of refresh token cookie
+    'AUTH_COOKIE_DOMAIN': None,  # Set to your domain in production
+    'AUTH_COOKIE_SECURE': False,  # Set to True in production (HTTPS only)
+    'AUTH_COOKIE_HTTP_ONLY': True,  # Prevent JavaScript access
+    'AUTH_COOKIE_PATH': '/',
+    'AUTH_COOKIE_SAMESITE': 'Lax',  # CSRF protection
 }
 
 # CORS settings

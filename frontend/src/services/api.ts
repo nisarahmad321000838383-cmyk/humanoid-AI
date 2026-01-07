@@ -25,44 +25,31 @@ class ApiService {
       headers: {
         'Content-Type': 'application/json',
       },
+      withCredentials: true, // Enable sending cookies with requests
     });
 
-    // Request interceptor to add auth token
-    this.api.interceptors.request.use(
-      (config) => {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
-
-    // Response interceptor to handle token refresh
+    // Response interceptor to handle 401 errors
     this.api.interceptors.response.use(
       (response) => response,
       async (error) => {
         const originalRequest = error.config;
 
+        // If we get a 401 and haven't retried, try refreshing the token
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
 
           try {
-            const refreshToken = localStorage.getItem('refreshToken');
-            if (refreshToken) {
-              const response = await axios.post(
-                `${API_BASE_URL}/auth/token/refresh/`,
-                { refresh: refreshToken }
-              );
-              const { access } = response.data;
-              localStorage.setItem('accessToken', access);
-              originalRequest.headers.Authorization = `Bearer ${access}`;
-              return this.api(originalRequest);
-            }
+            // Try to refresh the token
+            await axios.post(
+              `${API_BASE_URL}/auth/token/refresh/`,
+              {},
+              { withCredentials: true }
+            );
+            
+            // Retry the original request
+            return this.api(originalRequest);
           } catch (refreshError) {
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
+            // Refresh failed, redirect to login
             window.location.href = '/login';
             return Promise.reject(refreshError);
           }
@@ -85,8 +72,8 @@ class ApiService {
     return response.data;
   }
 
-  async logout(refreshToken: string): Promise<void> {
-    await this.api.post('/auth/logout/', { refresh_token: refreshToken });
+  async logout(): Promise<void> {
+    await this.api.post('/auth/logout/');
   }
 
   async getCurrentUser(): Promise<User> {

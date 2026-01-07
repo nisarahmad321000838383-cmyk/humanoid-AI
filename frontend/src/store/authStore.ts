@@ -24,8 +24,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await apiService.login(credentials);
-      localStorage.setItem('accessToken', response.tokens.access);
-      localStorage.setItem('refreshToken', response.tokens.refresh);
+      // Tokens are now stored in HTTP-only cookies by the backend
       set({
         user: response.user,
         isAuthenticated: true,
@@ -43,8 +42,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     console.log('Register called with data:', data);
     try {
       const response = await apiService.register(data);
-      localStorage.setItem('accessToken', response.tokens.access);
-      localStorage.setItem('refreshToken', response.tokens.refresh);
+      // Tokens are now stored in HTTP-only cookies by the backend
       set({
         user: response.user,
         isAuthenticated: true,
@@ -77,15 +75,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: async () => {
     try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (refreshToken) {
-        await apiService.logout(refreshToken);
-      }
+      await apiService.logout();
+      // Cookies are cleared by the backend
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
       set({
         user: null,
         isAuthenticated: false,
@@ -94,12 +88,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   loadUser: async () => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      set({ isAuthenticated: false, user: null });
-      return;
-    }
-
+    // Try to load user from cookie-based auth
     set({ isLoading: true });
     try {
       const user = await apiService.getCurrentUser();
@@ -109,8 +98,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         isLoading: false,
       });
     } catch (error) {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      // No valid token cookie or token expired
       set({
         user: null,
         isAuthenticated: false,
