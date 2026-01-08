@@ -8,7 +8,7 @@ const Login = () => {
   const navigate = useNavigate();
   const { login, isLoading, error, clearError, isAuthenticated } = useAuthStore();
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: '',
   });
 
@@ -45,7 +45,7 @@ const Login = () => {
 
         <div className="auth-card">
           <h2>Welcome back</h2>
-          <p className="auth-subtitle">Sign in to continue your conversations</p>
+          <p className="auth-subtitle">Enter the free AI hallucination universe — Sign In Now.</p>
 
           {error && (
             <div className="error-message">
@@ -55,15 +55,15 @@ const Login = () => {
 
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-group">
-              <label htmlFor="username">Username</label>
+              <label htmlFor="email">Email</label>
               <input
-                id="username"
-                type="text"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                placeholder="Enter your username"
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="Enter your email"
                 required
-                autoComplete="username"
+                autoComplete="email"
               />
             </div>
 
