@@ -118,7 +118,11 @@ class ChatView(generics.GenericAPIView):
             if not conversation_id:
                 conversation.delete()
             
+            # Use the error message from the service (already masked)
+            # or fallback to generic message
+            error_message = str(e) if str(e) else "Something went wrong! Try Again! Send another message!"
+            
             return Response({
-                'error': str(e),
-                'message': 'Failed to generate AI response'
+                'error': error_message,
+                'message': error_message
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

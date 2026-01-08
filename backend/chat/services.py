@@ -144,5 +144,6 @@ If you're unsure about something, clearly state your uncertainty rather than gue
             raise Exception(f"Unexpected API response format: {response}")
             
         except Exception as e:
-            error_msg = f"Error communicating with Hugging Face API: {str(e)}"
+            # Generic error message to mask the underlying API provider
+            error_msg = "Something went wrong! Try Again! Send another message!"
             raise Exception(error_msg)
