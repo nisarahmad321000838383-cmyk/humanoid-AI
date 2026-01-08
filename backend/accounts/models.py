@@ -107,5 +107,6 @@ class UserHFTokenAssignment(models.Model):
         return f"{self.user.username} - {self.hf_token.name} - {status}"
 # Re-export AuthToken from models_token
 from .models_token import AuthToken
+from .models_business import Business
 
-__all__ = ['User', 'HuggingFaceToken', 'UserHFTokenAssignment', 'AuthToken']
+__all__ = ['User', 'HuggingFaceToken', 'UserHFTokenAssignment', 'AuthToken', 'Business']

@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, FormEvent } from 'react';
 import { useChatStore } from '@/store/chatStore';
 import { useAuthStore } from '@/store/authStore';
-import { Send, Menu, Sparkles, Loader2, Brain } from 'lucide-react';
+import { Send, Menu, Sparkles, Loader2, Brain, Briefcase } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import BusinessModal from './BusinessModal';
 import './ChatArea.css';
 
 interface ChatAreaProps {
@@ -17,6 +18,7 @@ const ChatArea = ({ isSidebarOpen, onToggleSidebar }: ChatAreaProps) => {
   const { currentConversation, sendMessage, isSending, error } = useChatStore();
   const [input, setInput] = useState('');
   const [deepDive, setDeepDive] = useState(false);
+  const [isBusinessModalOpen, setIsBusinessModalOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -68,7 +70,20 @@ const ChatArea = ({ isSidebarOpen, onToggleSidebar }: ChatAreaProps) => {
           <h1>Humanoid AI</h1>
           <span className="chat-slogan">No Hallucination</span>
         </div>
+        <button 
+          className="business-button" 
+          onClick={() => setIsBusinessModalOpen(true)}
+          title="Manage your business"
+        >
+          <Briefcase size={20} />
+          <span>Your Business</span>
+        </button>
       </div>
+
+      <BusinessModal 
+        isOpen={isBusinessModalOpen} 
+        onClose={() => setIsBusinessModalOpen(false)} 
+      />
 
       <div className="chat-messages">
         {!currentConversation?.messages?.length ? (

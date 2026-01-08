@@ -12,6 +12,12 @@ from .views import (
     HuggingFaceTokenViewSet,
     UserHFTokenAssignmentViewSet
 )
+from .views_business import (
+    BusinessRegisterView,
+    BusinessDetailView,
+    BusinessSearchView,
+    MyBusinessView
+)
 
 # Create router for viewsets
 router = DefaultRouter()
@@ -26,5 +32,10 @@ urlpatterns = [
     path('clear-cookies/', ClearCookiesView.as_view(), name='clear-cookies'),
     path('check-availability/', CheckAvailabilityView.as_view(), name='check-availability'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
+    # Business endpoints
+    path('business/register/', BusinessRegisterView.as_view(), name='business-register'),
+    path('business/my/', MyBusinessView.as_view(), name='my-business'),
+    path('business/', BusinessDetailView.as_view(), name='business-detail'),
+    path('business/search/', BusinessSearchView.as_view(), name='business-search'),
     path('', include(router.urls)),
 ]

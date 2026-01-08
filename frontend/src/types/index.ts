@@ -105,3 +105,26 @@ export interface UserHFTokenAssignment {
   is_active: boolean;
   session_identifier: string;
 }
+
+export interface Business {
+  id: number;
+  user: number;
+  business_info: string;
+  logo_base64?: string | null;
+  logo_filename?: string | null;
+  logo_content_type?: string | null;
+  chroma_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BusinessCreateUpdate {
+  business_info: string;
+  logo?: string;
+}
+
+export interface BusinessResponse {
+  has_business: boolean;
+  business?: Business;
+  message?: string;
+}

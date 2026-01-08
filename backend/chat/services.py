@@ -75,6 +75,7 @@ If you're unsure about something, clearly state your uncertainty rather than gue
     ) -> str:
         """
         Generate a response using the Hugging Face Chat Completion API.
+        Searches for relevant business information in ChromaDB and includes it in context.
         
         Args:
             user_message: The user's message
@@ -84,6 +85,9 @@ If you're unsure about something, clearly state your uncertainty rather than gue
         Returns:
             The AI's response text
         """
+        # Search for relevant business information in ChromaDB
+        business_context = self._get_business_context(user_message)
+        
         # Choose system prompt based on deep dive mode
         if deep_dive:
             system_prompt = """You are Humanoid AI, an advanced AI assistant with the core principle of "No Hallucination". 
@@ -113,6 +117,10 @@ If you're unsure about something, clearly state your uncertainty rather than gue
         
         # Build messages list for Chat Completion API
         messages = [{"role": "system", "content": system_prompt}]
+        
+        # Add business context if found
+        if business_context:
+            messages.append({"role": "system", "content": business_context})
         
         # Add conversation history if exists
         if conversation_history:
@@ -147,3 +155,40 @@ If you're unsure about something, clearly state your uncertainty rather than gue
             # Generic error message to mask the underlying API provider
             error_msg = "Something went wrong! Try Again! Send another message!"
             raise Exception(error_msg)
+    
+    def _get_business_context(self, query: str) -> str:
+        """
+        Search for relevant business information in ChromaDB based on the query.
+        
+        Args:
+            query: The user's query
+            
+        Returns:
+            Formatted business context string or empty string
+        """
+        try:
+            from .chroma_service import chroma_service
+            
+            # Search for relevant businesses (will return up to 3, or fewer if not enough exist)
+            results = chroma_service.search_businesses(query, n_results=3)
+            
+            if not results or len(results) == 0:
+                return ""
+            
+            # Format business information for the AI
+            context_parts = ["\n--- RELEVANT BUSINESS INFORMATION ---"]
+            context_parts.append("The following businesses may be relevant to the user's query:\n")
+            
+            for i, business in enumerate(results, 1):
+                context_parts.append(f"\nBusiness {i} (Owner: {business.get('username', 'Unknown')}):")
+                context_parts.append(business.get('business_info', 'No information available'))
+                context_parts.append("---")
+            
+            context_parts.append("\nIf the user's query is related to any of these businesses, include relevant information in your response.")
+            context_parts.append("If not related, ignore this context and respond to the user's query normally.")
+            context_parts.append("--- END OF BUSINESS INFORMATION ---\n")
+            
+            return "\n".join(context_parts)
+        except Exception as e:
+            print(f"Error getting business context: {e}")
+            return ""

@@ -12,6 +12,9 @@ import type {
   HuggingFaceTokenCreate,
   HuggingFaceTokenStats,
   UserHFTokenAssignment,
+  Business,
+  BusinessCreateUpdate,
+  BusinessResponse,
 } from '@/types';
 
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -187,6 +190,27 @@ class ApiService {
 
   async getHFAssignments(): Promise<UserHFTokenAssignment[]> {
     const response = await this.api.get<UserHFTokenAssignment[]>('/auth/hf-assignments/');
+    return response.data;
+  }
+
+  // Business endpoints
+  async getMyBusiness(): Promise<BusinessResponse> {
+    const response = await this.api.get<BusinessResponse>('/auth/business/my/');
+    return response.data;
+  }
+
+  async registerBusiness(data: BusinessCreateUpdate): Promise<{ message: string; business: Business }> {
+    const response = await this.api.post('/auth/business/register/', data);
+    return response.data;
+  }
+
+  async updateBusiness(data: BusinessCreateUpdate): Promise<{ message: string; business: Business }> {
+    const response = await this.api.patch('/auth/business/', data);
+    return response.data;
+  }
+
+  async deleteBusiness(): Promise<{ message: string }> {
+    const response = await this.api.delete('/auth/business/');
     return response.data;
   }
 }
