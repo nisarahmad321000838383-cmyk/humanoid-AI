@@ -152,8 +152,18 @@ If you're unsure about something, clearly state your uncertainty rather than gue
             raise Exception(f"Unexpected API response format: {response}")
             
         except Exception as e:
-            # Generic error message to mask the underlying API provider
-            error_msg = "Something went wrong! Try Again! Send another message!"
+            # Log the actual error for debugging (only in development)
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"HuggingFace API Error: {str(e)}")
+            
+            # Check if it's an authentication/token error
+            error_str = str(e).lower()
+            if any(keyword in error_str for keyword in ['token', 'auth', 'unauthorized', '401', '403']):
+                error_msg = "Invalid HuggingFace API token. Please contact the administrator to add a valid token in Settings."
+            else:
+                # Generic error message to mask the underlying API provider
+                error_msg = "Something went wrong! Try Again! Send another message!"
             raise Exception(error_msg)
     
     def _get_business_context(self, query: str) -> str:

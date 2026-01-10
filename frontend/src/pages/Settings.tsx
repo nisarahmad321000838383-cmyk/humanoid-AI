@@ -143,7 +143,7 @@ const Settings = () => {
           </div>
           <div className="stat-card">
             <div className="stat-value">{stats.active_assignments}</div>
-            <div className="stat-label">Active Assignments</div>
+            <div className="stat-label">Active User Sessions</div>
           </div>
         </div>
       )}
@@ -162,6 +162,9 @@ const Settings = () => {
           {tokens.length === 0 ? (
             <div className="empty-state">
               <p>No tokens added yet. Add your first HuggingFace token to get started.</p>
+              <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
+                Get your token from <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer" style={{ color: '#667eea' }}>HuggingFace Settings</a>
+              </p>
             </div>
           ) : (
             tokens.map((token) => (
@@ -178,7 +181,7 @@ const Settings = () => {
                   </div>
                   <div className="token-meta">
                     <span>Created by: {token.created_by_username}</span>
-                    <span>Active assignments: {token.assignment_count || 0}</span>
+                    <span>Used by {token.assignment_count || 0} active session{(token.assignment_count || 0) !== 1 ? 's' : ''}</span>
                     <span>Created: {new Date(token.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
@@ -233,7 +236,11 @@ const Settings = () => {
                   rows={3}
                   required
                 />
-                <small>Enter your HuggingFace API token. Keep it secure!</small>
+                <small>
+                  Enter your HuggingFace API token (starts with hf_). 
+                  Get one from <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer">HuggingFace</a>. 
+                  Keep it secure!
+                </small>
               </div>
               <div className="form-group checkbox-group">
                 <label>
