@@ -437,16 +437,13 @@ class LogoutView(generics.GenericAPIView):
     
     def _release_hf_token(self, user, session_id):
         """
-        Release the HuggingFace token assignment for this session.
+        Delete the HuggingFace token assignment for this session.
         """
         UserHFTokenAssignment.objects.filter(
             user=user,
             session_identifier=session_id,
             is_active=True
-        ).update(
-            is_active=False,
-            released_at=timezone.now()
-        )
+        ).delete()
 
 
 class HuggingFaceTokenViewSet(viewsets.ModelViewSet):

@@ -121,7 +121,7 @@ const Settings = () => {
   return (
     <div className="settings-container">
       <div className="settings-header">
-        <h1>HuggingFace Token Management</h1>
+        <h1>HuggingFace Acccess Token Management</h1>
         <button className="btn-primary" onClick={() => setShowAddModal(true)}>
           + Add Token
         </button>
