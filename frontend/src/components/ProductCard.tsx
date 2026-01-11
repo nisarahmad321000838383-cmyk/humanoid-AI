@@ -1,5 +1,5 @@
 import { Product } from '@/types';
-import { Package, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Package, ChevronLeft, ChevronRight, Building2, MapPin, User } from 'lucide-react';
 import { useState } from 'react';
 import './ProductCard.css';
 
@@ -38,6 +38,9 @@ const ProductCard = ({ product }: ProductCardProps) => {
   const productPrice = lines.find(line => line.toLowerCase().includes('price'))
     ?.replace(/^Price:\s*/i, '').trim();
   const specifications = lines.slice(2).join('\n');
+
+  // Get business info
+  const businessInfo = product.business_info;
 
   return (
     <div className="product-card">
@@ -93,6 +96,39 @@ const ProductCard = ({ product }: ProductCardProps) => {
         {productPrice && (
           <div className="product-price">{productPrice}</div>
         )}
+        
+        {/* Business Information Section */}
+        {businessInfo && (
+          <div className="product-business-info">
+            <div className="business-header">
+              {businessInfo.logo_base64 && businessInfo.logo_content_type ? (
+                <img 
+                  src={getImageSrc(businessInfo.logo_base64, businessInfo.logo_content_type)}
+                  alt={businessInfo.company_name}
+                  className="business-logo"
+                />
+              ) : (
+                <div className="business-logo-placeholder">
+                  <Building2 size={20} />
+                </div>
+              )}
+              <div className="business-name-container">
+                <span className="business-name">{businessInfo.company_name}</span>
+                <span className="business-owner">
+                  <User size={12} />
+                  {businessInfo.owner_username}
+                </span>
+              </div>
+            </div>
+            {businessInfo.address && (
+              <div className="business-address">
+                <MapPin size={14} />
+                <span>{businessInfo.address}</span>
+              </div>
+            )}
+          </div>
+        )}
+        
         {specifications && (
           <div className="product-specs">
             <pre>{specifications}</pre>

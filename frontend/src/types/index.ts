@@ -140,12 +140,24 @@ export interface ProductImage {
   created_at: string;
 }
 
+export interface ProductBusinessInfo {
+  id: number;
+  owner_username: string;
+  company_name: string;
+  address: string | null;
+  full_info: string;
+  has_logo: boolean;
+  logo_base64: string | null;
+  logo_content_type: string | null;
+}
+
 export interface Product {
   id: number;
   business: number;
   product_description: string;
   images: ProductImage[];
   images_count: number;
+  business_info: ProductBusinessInfo | null;
   created_at: string;
   updated_at: string;
 }

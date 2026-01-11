@@ -255,18 +255,28 @@ If you're unsure about something, clearly state your uncertainty rather than gue
                 context_parts.append(f"\nProduct {i} (Business Owner: {product.get('username', 'Unknown')}):")
                 context_parts.append(product.get('product_description', 'No information available'))
                 
-                # Get product images if product_db_id is available
+                # Get product images and business info if product_db_id is available
                 product_db_id = product.get('product_db_id')
                 if product_db_id:
                     try:
-                        product_obj = Product.objects.prefetch_related('images').get(id=product_db_id)
+                        product_obj = Product.objects.select_related('business', 'business__user').prefetch_related('images').get(id=product_db_id)
                         image_count = product_obj.images.count()
+                        
+                        # Add business info to context
+                        if product_obj.business:
+                            business = product_obj.business
+                            context_parts.append(f"Owner Company: {business.user.username}")
+                            context_parts.append(f"Business Details: {business.business_info}")
                         
                         if image_count > 0:
                             context_parts.append(f"Images: This product has {image_count} image(s) available.")
                             context_parts.append(f"Product ID: {product_db_id}")
                             
-                            # Store product data for response
+                            # Store product data for response (includes business_info via serializer)
+                            serializer = ProductSerializer(product_obj)
+                            self.relevant_products.append(serializer.data)
+                        else:
+                            # Still include products without images but with business info
                             serializer = ProductSerializer(product_obj)
                             self.relevant_products.append(serializer.data)
                     except Product.DoesNotExist:

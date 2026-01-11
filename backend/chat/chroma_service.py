@@ -74,16 +74,22 @@ class ChromaDBService:
             print(f"Error adding business to ChromaDB: {e}")
             return False
     
-    def search_businesses(self, query: str, n_results: int = 3) -> List[Dict]:
+    def search_businesses(self, query: str, n_results: int = 3, distance_threshold: float = 1.2) -> List[Dict]:
         """
         Search for businesses based on a query.
         
         Args:
             query: Search query text
             n_results: Number of results to return
+            distance_threshold: Maximum distance for a business to be considered relevant.
+                               Lower values = stricter matching. ChromaDB uses L2 distance:
+                               - 0.0-0.5: Very similar (exact or near-exact match)
+                               - 0.5-1.0: Similar (related businesses)
+                               - 1.0-1.5: Somewhat related
+                               - >1.5: Probably not relevant
             
         Returns:
-            List of dictionaries containing business information
+            List of dictionaries containing business information (only relevant matches)
         """
         try:
             # Check how many businesses exist in the collection
@@ -105,15 +111,22 @@ class ChromaDBService:
                 n_results=actual_n_results
             )
             
-            # Format results
+            # Format results - only include businesses within the distance threshold
             businesses = []
             if results and results['documents']:
                 for i in range(len(results['documents'][0])):
+                    distance = results['distances'][0][i] if 'distances' in results else None
+                    
+                    # Only include businesses that are actually relevant (within threshold)
+                    if distance is not None and distance > distance_threshold:
+                        # Skip businesses that aren't relevant enough
+                        continue
+                    
                     businesses.append({
                         'id': results['ids'][0][i],
                         'business_info': results['documents'][0][i],
                         'username': results['metadatas'][0][i].get('username', 'Unknown'),
-                        'distance': results['distances'][0][i] if 'distances' in results else None
+                        'distance': distance
                     })
             
             return businesses
@@ -233,7 +246,7 @@ class ChromaDBService:
             print(f"Error adding product to ChromaDB: {e}")
             return False
     
-    def search_products(self, query: str, n_results: int = 5, business_id: Optional[int] = None) -> List[Dict]:
+    def search_products(self, query: str, n_results: int = 5, business_id: Optional[int] = None, distance_threshold: float = 1.2) -> List[Dict]:
         """
         Search for products based on a query.
         
@@ -241,9 +254,15 @@ class ChromaDBService:
             query: Search query text
             n_results: Number of results to return
             business_id: Optional business ID to filter results
+            distance_threshold: Maximum distance for a product to be considered relevant.
+                               Lower values = stricter matching. ChromaDB uses L2 distance:
+                               - 0.0-0.5: Very similar (exact or near-exact match)
+                               - 0.5-1.0: Similar (related products)
+                               - 1.0-1.5: Somewhat related
+                               - >1.5: Probably not relevant
             
         Returns:
-            List of dictionaries containing product information
+            List of dictionaries containing product information (only relevant matches)
         """
         try:
             # Check how many products exist in the collection
@@ -268,17 +287,24 @@ class ChromaDBService:
                 where=where_filter if where_filter else None
             )
             
-            # Format results
+            # Format results - only include products within the distance threshold
             products = []
             if results and results['documents']:
                 for i in range(len(results['documents'][0])):
+                    distance = results['distances'][0][i] if 'distances' in results else None
+                    
+                    # Only include products that are actually relevant (within threshold)
+                    if distance is not None and distance > distance_threshold:
+                        # Skip products that aren't relevant enough
+                        continue
+                    
                     products.append({
                         'id': results['ids'][0][i],
                         'product_description': results['documents'][0][i],
                         'username': results['metadatas'][0][i].get('username', 'Unknown'),
                         'business_id': results['metadatas'][0][i].get('business_id'),
                         'product_db_id': results['metadatas'][0][i].get('product_db_id'),
-                        'distance': results['distances'][0][i] if 'distances' in results else None
+                        'distance': distance
                     })
             
             return products

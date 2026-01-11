@@ -37,18 +37,57 @@ class ProductSerializer(serializers.ModelSerializer):
         help_text="List of base64 encoded images (1-4 images, total size <= 1MB)"
     )
     images_count = serializers.SerializerMethodField(read_only=True)
+    business_info = serializers.SerializerMethodField(read_only=True)
     
     class Meta:
         model = Product
         fields = (
             'id', 'business', 'product_description', 'images', 'images_upload',
-            'images_count', 'created_at', 'updated_at'
+            'images_count', 'business_info', 'created_at', 'updated_at'
         )
-        read_only_fields = ('id', 'business', 'created_at', 'updated_at', 'images_count')
+        read_only_fields = ('id', 'business', 'created_at', 'updated_at', 'images_count', 'business_info')
     
     def get_images_count(self, obj):
         """Get count of images for this product."""
         return obj.images.count()
+    
+    def get_business_info(self, obj):
+        """Get business information for the product owner."""
+        if obj.business:
+            business = obj.business
+            # Parse business_info to extract relevant details
+            business_info_text = business.business_info or ""
+            lines = business_info_text.strip().split('\n')
+            
+            # Try to extract company name (usually first line)
+            company_name = lines[0].replace('Business Name:', '').replace('Company Name:', '').replace('Name:', '').strip() if lines else "Unknown Business"
+            
+            # Try to find address line
+            address = None
+            for line in lines:
+                line_lower = line.lower()
+                if 'address' in line_lower or 'location' in line_lower:
+                    address = line.replace('Address:', '').replace('Location:', '').replace('address:', '').replace('location:', '').strip()
+                    break
+            
+            return {
+                'id': business.id,
+                'owner_username': business.user.username,
+                'company_name': company_name,
+                'address': address,
+                'full_info': business_info_text,
+                'has_logo': bool(business.logo),
+                'logo_base64': self._get_logo_base64(business) if business.logo else None,
+                'logo_content_type': business.logo_content_type
+            }
+        return None
+    
+    def _get_logo_base64(self, business):
+        """Convert binary logo to base64 for frontend display."""
+        import base64
+        if business.logo:
+            return base64.b64encode(business.logo).decode('utf-8')
+        return None
     
     def validate_product_description(self, value):
         """Validate product description is not empty and has max 10 lines."""
