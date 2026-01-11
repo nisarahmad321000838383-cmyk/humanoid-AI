@@ -85,8 +85,9 @@ If you're unsure about something, clearly state your uncertainty rather than gue
         Returns:
             The AI's response text
         """
-        # Search for relevant business information in ChromaDB
+        # Search for relevant business and product information in ChromaDB
         business_context = self._get_business_context(user_message)
+        product_context = self._get_product_context(user_message)
         
         # Choose system prompt based on deep dive mode
         if deep_dive:
@@ -121,6 +122,10 @@ If you're unsure about something, clearly state your uncertainty rather than gue
         # Add business context if found
         if business_context:
             messages.append({"role": "system", "content": business_context})
+        
+        # Add product context if found
+        if product_context:
+            messages.append({"role": "system", "content": product_context})
         
         # Add conversation history if exists
         if conversation_history:
@@ -201,4 +206,41 @@ If you're unsure about something, clearly state your uncertainty rather than gue
             return "\n".join(context_parts)
         except Exception as e:
             print(f"Error getting business context: {e}")
+            return ""
+    
+    def _get_product_context(self, query: str) -> str:
+        """
+        Search for relevant product information in ChromaDB based on the query.
+        
+        Args:
+            query: The user's query
+            
+        Returns:
+            Formatted product context string or empty string
+        """
+        try:
+            from .chroma_service import chroma_service
+            
+            # Search for relevant products (will return up to 5, or fewer if not enough exist)
+            results = chroma_service.search_products(query, n_results=5)
+            
+            if not results or len(results) == 0:
+                return ""
+            
+            # Format product information for the AI
+            context_parts = ["\n--- RELEVANT PRODUCT INFORMATION ---"]
+            context_parts.append("The following products may be relevant to the user's query:\n")
+            
+            for i, product in enumerate(results, 1):
+                context_parts.append(f"\nProduct {i} (Business Owner: {product.get('username', 'Unknown')}):")
+                context_parts.append(product.get('product_description', 'No information available'))
+                context_parts.append("---")
+            
+            context_parts.append("\nIf the user's query is related to any of these products, include relevant information in your response.")
+            context_parts.append("If not related, ignore this context and respond to the user's query normally.")
+            context_parts.append("--- END OF PRODUCT INFORMATION ---\n")
+            
+            return "\n".join(context_parts)
+        except Exception as e:
+            print(f"Error getting product context: {e}")
             return ""
