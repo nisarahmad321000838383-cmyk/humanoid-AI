@@ -28,6 +28,9 @@ class HuggingFaceService:
             token=self.api_token
         )
         
+        # Store relevant products found during context search
+        self.relevant_products = []
+        
         # System prompt emphasizing no hallucination and response length limits
         self.system_prompt = """You are Humanoid AI, an advanced AI assistant with the core principle of "No Hallucination". 
 
@@ -44,6 +47,12 @@ IMPORTANT RESPONSE LENGTH RULE:
 - If the user asks for a specific number of lines, honor their request
 - If the user asks for a detailed, long, or comprehensive answer, you may exceed 10 lines
 - Otherwise, always keep responses concise and within 10 lines
+
+IMPORTANT: When you receive product or business information in your context:
+- Product images are automatically displayed to users alongside your responses
+- DO NOT say you cannot show, display, or share images
+- Simply describe the products/businesses naturally
+- The visual content is handled by the system automatically
 
 If you're unsure about something, clearly state your uncertainty rather than guessing or fabricating information."""
     
@@ -111,6 +120,12 @@ In Deep Dive mode:
 - Consider multiple angles and perspectives
 - Elaborate on key concepts
 - You may write longer responses (no strict line limit, but stay focused)
+
+IMPORTANT: When you receive product or business information in your context:
+- Product images are automatically displayed to users alongside your responses
+- DO NOT say you cannot show, display, or share images
+- Simply describe the products/businesses naturally and in detail
+- The visual content is handled by the system automatically
 
 If you're unsure about something, clearly state your uncertainty rather than guessing or fabricating information."""
         else:
@@ -220,6 +235,11 @@ If you're unsure about something, clearly state your uncertainty rather than gue
         """
         try:
             from .chroma_service import chroma_service
+            from accounts.models_product import Product
+            from accounts.serializers_product import ProductSerializer
+            
+            # Reset relevant products for this query
+            self.relevant_products = []
             
             # Search for relevant products (will return up to 5, or fewer if not enough exist)
             results = chroma_service.search_products(query, n_results=5)
@@ -234,10 +254,34 @@ If you're unsure about something, clearly state your uncertainty rather than gue
             for i, product in enumerate(results, 1):
                 context_parts.append(f"\nProduct {i} (Business Owner: {product.get('username', 'Unknown')}):")
                 context_parts.append(product.get('product_description', 'No information available'))
+                
+                # Get product images if product_db_id is available
+                product_db_id = product.get('product_db_id')
+                if product_db_id:
+                    try:
+                        product_obj = Product.objects.prefetch_related('images').get(id=product_db_id)
+                        image_count = product_obj.images.count()
+                        
+                        if image_count > 0:
+                            context_parts.append(f"Images: This product has {image_count} image(s) available.")
+                            context_parts.append(f"Product ID: {product_db_id}")
+                            
+                            # Store product data for response
+                            serializer = ProductSerializer(product_obj)
+                            self.relevant_products.append(serializer.data)
+                    except Product.DoesNotExist:
+                        pass
+                
                 context_parts.append("---")
             
-            context_parts.append("\nIf the user's query is related to any of these products, include relevant information in your response.")
-            context_parts.append("If not related, ignore this context and respond to the user's query normally.")
+            context_parts.append("\nIMPORTANT INSTRUCTIONS FOR HANDLING PRODUCTS:")
+            context_parts.append("- If the user's query is related to any of these products, include relevant product information in your response.")
+            context_parts.append("- The product images ARE AUTOMATICALLY DISPLAYED to the user alongside your message.")
+            context_parts.append("- DO NOT say you cannot display or share images - they are already visible to the user.")
+            context_parts.append("- Simply describe the products naturally and mention details like name, price, and specifications.")
+            context_parts.append("- You can say things like 'Here are the products' or 'I found these items for you' or 'Check out these options'.")
+            context_parts.append("- The images with full product details are shown in product cards next to your response.")
+            context_parts.append("- If not related to the query, ignore this context and respond normally.")
             context_parts.append("--- END OF PRODUCT INFORMATION ---\n")
             
             return "\n".join(context_parts)

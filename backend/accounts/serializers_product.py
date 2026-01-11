@@ -164,7 +164,8 @@ class ProductSerializer(serializers.ModelSerializer):
             product_id=chroma_id,
             product_description=product.product_description,
             business_id=business.id,
-            username=business.user.username
+            username=business.user.username,
+            product_db_id=product.id
         )
         
         # Process and create images
@@ -209,7 +210,8 @@ class ProductSerializer(serializers.ModelSerializer):
                 product_id=instance.chroma_id,
                 product_description=instance.product_description,
                 business_id=instance.business.id,
-                username=instance.business.user.username
+                username=instance.business.user.username,
+                product_db_id=instance.id
             )
         
         # Update images if provided

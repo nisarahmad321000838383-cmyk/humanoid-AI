@@ -105,12 +105,19 @@ class ChatView(generics.GenericAPIView):
                 content=ai_response
             )
             
-            return Response({
+            # Prepare response data
+            response_data = {
                 'conversation_id': conversation.id,
                 'user_message': MessageSerializer(user_msg).data,
                 'ai_response': MessageSerializer(ai_msg).data,
                 'conversation': ConversationSerializer(conversation).data
-            }, status=status.HTTP_200_OK)
+            }
+            
+            # Include relevant products with images if found
+            if hf_service.relevant_products:
+                response_data['relevant_products'] = hf_service.relevant_products
+            
+            return Response(response_data, status=status.HTTP_200_OK)
             
         except Exception as e:
             # Delete the user message if AI response fails

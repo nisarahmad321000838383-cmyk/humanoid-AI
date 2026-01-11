@@ -192,7 +192,7 @@ class ChromaDBService:
             return []
     
     # Product methods
-    def add_product(self, product_id: str, product_description: str, business_id: int, username: str) -> bool:
+    def add_product(self, product_id: str, product_description: str, business_id: int, username: str, product_db_id: int = None) -> bool:
         """
         Add or update product information in ChromaDB.
         
@@ -201,6 +201,7 @@ class ChromaDBService:
             product_description: Product description text
             business_id: ID of the business that owns the product
             username: Username of the business owner
+            product_db_id: Database ID of the product for image retrieval
             
         Returns:
             True if successful, False otherwise
@@ -209,16 +210,23 @@ class ChromaDBService:
             # Generate embedding
             embedding = self.embedding_model.encode(product_description).tolist()
             
+            # Prepare metadata
+            metadata = {
+                "username": username,
+                "business_id": business_id,
+                "type": "product"
+            }
+            
+            # Add product_db_id if provided
+            if product_db_id is not None:
+                metadata["product_db_id"] = product_db_id
+            
             # Add to ChromaDB
             self.products_collection.upsert(
                 ids=[product_id],
                 embeddings=[embedding],
                 documents=[product_description],
-                metadatas=[{
-                    "username": username,
-                    "business_id": business_id,
-                    "type": "product"
-                }]
+                metadatas=[metadata]
             )
             return True
         except Exception as e:
@@ -269,6 +277,7 @@ class ChromaDBService:
                         'product_description': results['documents'][0][i],
                         'username': results['metadatas'][0][i].get('username', 'Unknown'),
                         'business_id': results['metadatas'][0][i].get('business_id'),
+                        'product_db_id': results['metadatas'][0][i].get('product_db_id'),
                         'distance': results['distances'][0][i] if 'distances' in results else None
                     })
             

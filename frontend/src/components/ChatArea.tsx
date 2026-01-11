@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import BusinessModal from './BusinessModal';
+import ProductCard from './ProductCard';
 import './ChatArea.css';
 
 interface ChatAreaProps {
@@ -15,7 +16,7 @@ interface ChatAreaProps {
 
 const ChatArea = ({ isSidebarOpen, onToggleSidebar }: ChatAreaProps) => {
   const { user } = useAuthStore();
-  const { currentConversation, sendMessage, isSending, error } = useChatStore();
+  const { currentConversation, relevantProducts, sendMessage, isSending, error } = useChatStore();
   const [input, setInput] = useState('');
   const [deepDive, setDeepDive] = useState(false);
   const [isBusinessModalOpen, setIsBusinessModalOpen] = useState(false);
@@ -155,6 +156,23 @@ const ChatArea = ({ isSidebarOpen, onToggleSidebar }: ChatAreaProps) => {
                       {message.content}
                     </ReactMarkdown>
                   </div>
+                  
+                  {/* Show product cards after the last AI message if products are available */}
+                  {message.role === 'assistant' && 
+                   index === currentConversation.messages.length - 1 && 
+                   relevantProducts.length > 0 && (
+                    <div className="products-container">
+                      <div className="products-header">
+                        <h3>Related Products</h3>
+                        <span className="products-count">{relevantProducts.length} {relevantProducts.length === 1 ? 'product' : 'products'}</span>
+                      </div>
+                      <div className="products-grid">
+                        {relevantProducts.map((product) => (
+                          <ProductCard key={product.id} product={product} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

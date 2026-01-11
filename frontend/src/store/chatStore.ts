@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { apiService } from '@/services/api';
-import type { Conversation, ConversationListItem } from '@/types';
+import type { Conversation, ConversationListItem, Product } from '@/types';
 
 interface ChatState {
   conversations: ConversationListItem[];
   currentConversation: Conversation | null;
+  relevantProducts: Product[];
   isLoading: boolean;
   isSending: boolean;
   error: string | null;
@@ -19,6 +20,7 @@ interface ChatState {
 export const useChatStore = create<ChatState>((set, get) => ({
   conversations: [],
   currentConversation: null,
+  relevantProducts: [],
   isLoading: false,
   isSending: false,
   error: null,
@@ -61,6 +63,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       set({
         currentConversation: response.conversation,
+        relevantProducts: response.relevant_products || [],
         isSending: false,
       });
 

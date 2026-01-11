@@ -66,6 +66,7 @@ export interface ChatResponse {
   user_message: Message;
   ai_response: Message;
   conversation: Conversation;
+  relevant_products?: Product[];
 }
 
 export interface HuggingFaceToken {
