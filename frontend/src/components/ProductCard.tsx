@@ -1,6 +1,7 @@
 import { Product } from '@/types';
-import { Package, ChevronLeft, ChevronRight, Building2, MapPin, User } from 'lucide-react';
+import { Package, ChevronLeft, ChevronRight, Building2, MapPin, User, Expand } from 'lucide-react';
 import { useState } from 'react';
+import ImageModal from './ImageModal';
 import './ProductCard.css';
 
 interface ProductCardProps {
@@ -9,6 +10,7 @@ interface ProductCardProps {
 
 const ProductCard = ({ product }: ProductCardProps) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   const nextImage = () => {
     setCurrentImageIndex((prev) => 
@@ -42,6 +44,12 @@ const ProductCard = ({ product }: ProductCardProps) => {
   // Get business info
   const businessInfo = product.business_info;
 
+  const openModal = () => {
+    if (product.images.length > 0) {
+      setIsModalOpen(true);
+    }
+  };
+
   return (
     <div className="product-card">
       <div className="product-image-container">
@@ -53,20 +61,29 @@ const ProductCard = ({ product }: ProductCardProps) => {
                 product.images[currentImageIndex].image_content_type
               )} 
               alt={productName}
-              className="product-image"
+              className="product-image clickable"
+              onClick={openModal}
             />
+            {/* Expand button */}
+            <button 
+              className="image-expand-btn"
+              onClick={openModal}
+              aria-label="Expand image"
+            >
+              <Expand size={18} />
+            </button>
             {product.images.length > 1 && (
               <>
                 <button 
                   className="image-nav prev" 
-                  onClick={prevImage}
+                  onClick={(e) => { e.stopPropagation(); prevImage(); }}
                   aria-label="Previous image"
                 >
                   <ChevronLeft size={20} />
                 </button>
                 <button 
                   className="image-nav next" 
-                  onClick={nextImage}
+                  onClick={(e) => { e.stopPropagation(); nextImage(); }}
                   aria-label="Next image"
                 >
                   <ChevronRight size={20} />
@@ -76,7 +93,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
                     <span 
                       key={index}
                       className={`indicator ${index === currentImageIndex ? 'active' : ''}`}
-                      onClick={() => setCurrentImageIndex(index)}
+                      onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(index); }}
                     />
                   ))}
                 </div>
@@ -141,6 +158,15 @@ const ProductCard = ({ product }: ProductCardProps) => {
           </span>
         </div>
       </div>
+
+      {/* Image Modal for expanded view */}
+      <ImageModal
+        images={product.images}
+        initialIndex={currentImageIndex}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        productName={productName}
+      />
     </div>
   );
 };

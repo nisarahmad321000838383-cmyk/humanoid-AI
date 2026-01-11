@@ -29,6 +29,44 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 0.3s ease;
+}
+
+.product-image.clickable {
+  cursor: pointer;
+}
+
+.product-image.clickable:hover {
+  transform: scale(1.02);
+}
+
+/* Expand Button */
+.image-expand-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0;
+  z-index: 10;
+}
+
+.product-image-container:hover .image-expand-btn {
+  opacity: 1;
+}
+
+.image-expand-btn:hover {
+  background: rgba(102, 126, 234, 0.9);
+  transform: scale(1.1);
 }
 
 .no-image {
