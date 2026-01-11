@@ -270,7 +270,6 @@ If you're unsure about something, clearly state your uncertainty rather than gue
                         
                         if image_count > 0:
                             context_parts.append(f"Images: This product has {image_count} image(s) available.")
-                            context_parts.append(f"Product ID: {product_db_id}")
                             
                             # Store product data for response (includes business_info via serializer)
                             serializer = ProductSerializer(product_obj)
