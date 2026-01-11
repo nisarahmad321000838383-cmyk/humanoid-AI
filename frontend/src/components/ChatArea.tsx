@@ -162,10 +162,6 @@ const ChatArea = ({ isSidebarOpen, onToggleSidebar }: ChatAreaProps) => {
                    index === currentConversation.messages.length - 1 && 
                    relevantProducts.length > 0 && (
                     <div className="products-container">
-                      <div className="products-header">
-                        <h3>Related Products</h3>
-                        <span className="products-count">{relevantProducts.length} {relevantProducts.length === 1 ? 'product' : 'products'}</span>
-                      </div>
                       <div className="products-grid">
                         {relevantProducts.map((product) => (
                           <ProductCard key={product.id} product={product} />

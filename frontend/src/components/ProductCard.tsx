@@ -152,7 +152,6 @@ const ProductCard = ({ product }: ProductCardProps) => {
           </div>
         )}
         <div className="product-meta">
-          <span className="product-id">ID: {product.id}</span>
           <span className="product-images-count">
             {product.images_count} {product.images_count === 1 ? 'image' : 'images'}
           </span>
