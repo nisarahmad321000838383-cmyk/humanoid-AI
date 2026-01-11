@@ -18,6 +18,12 @@ from .views_business import (
     BusinessSearchView,
     MyBusinessView
 )
+from .views_product import (
+    ProductListCreateView,
+    ProductDetailView,
+    ProductStatsView,
+    ProductSearchView,
+)
 
 # Create router for viewsets
 router = DefaultRouter()
@@ -37,5 +43,10 @@ urlpatterns = [
     path('business/my/', MyBusinessView.as_view(), name='my-business'),
     path('business/', BusinessDetailView.as_view(), name='business-detail'),
     path('business/search/', BusinessSearchView.as_view(), name='business-search'),
+    # Products endpoints
+    path('products/', ProductListCreateView.as_view(), name='product-list-create'),
+    path('products/stats/', ProductStatsView.as_view(), name='product-stats'),
+    path('products/search/', ProductSearchView.as_view(), name='product-search'),
+    path('products/<int:pk>/', ProductDetailView.as_view(), name='product-detail'),
     path('', include(router.urls)),
 ]

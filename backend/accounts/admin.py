@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import User, HuggingFaceToken, UserHFTokenAssignment, AuthToken, Business
+from .models_product import Product, ProductImage
 
 
 @admin.register(User)
@@ -141,3 +142,76 @@ class BusinessAdmin(admin.ModelAdmin):
             )
         return "No logo"
     logo_preview.short_description = 'Logo Preview'
+
+
+@admin.register(Product)
+class ProductAdmin(admin.ModelAdmin):
+    """Admin configuration for Product model."""
+    
+    list_display = ('get_product_name', 'business', 'get_images_count', 'created_at', 'updated_at')
+    list_filter = ('created_at', 'updated_at')
+    search_fields = ('product_description', 'business__user__username')
+    ordering = ('-created_at',)
+    readonly_fields = ('created_at', 'updated_at')
+    
+    fieldsets = (
+        ('Business Information', {'fields': ('business',)}),
+        ('Product Information', {'fields': ('product_description',)}),
+        ('Metadata', {'fields': ('created_at', 'updated_at')}),
+    )
+    
+    def get_product_name(self, obj):
+        """Display first line of product description as name."""
+        first_line = obj.product_description.split('\n')[0]
+        return first_line[:50] + '...' if len(first_line) > 50 else first_line
+    get_product_name.short_description = 'Product Name'
+    
+    def get_images_count(self, obj):
+        """Display count of images."""
+        return obj.images.count()
+    get_images_count.short_description = 'Images'
+
+
+@admin.register(ProductImage)
+class ProductImageAdmin(admin.ModelAdmin):
+    """Admin configuration for ProductImage model."""
+    
+    list_display = ('get_image_label', 'product', 'order', 'get_image_size', 'created_at')
+    list_filter = ('created_at', 'order')
+    search_fields = ('product__product_description', 'image_filename')
+    ordering = ('product', 'order')
+    readonly_fields = ('created_at', 'image_preview')
+    
+    fieldsets = (
+        ('Product Information', {'fields': ('product', 'order')}),
+        ('Image Information', {'fields': ('image_filename', 'image_content_type', 'image_preview')}),
+        ('Metadata', {'fields': ('created_at',)}),
+    )
+    
+    def get_image_label(self, obj):
+        """Display image label with product info."""
+        product_name = obj.product.product_description.split('\n')[0][:30]
+        return f"Image {obj.order + 1} - {product_name}"
+    get_image_label.short_description = 'Image'
+    
+    def get_image_size(self, obj):
+        """Display image size in KB."""
+        if obj.image_data:
+            size_kb = len(obj.image_data) / 1024
+            return f"{size_kb:.2f} KB"
+        return "N/A"
+    get_image_size.short_description = 'Size'
+    
+    def image_preview(self, obj):
+        """Display image preview if available."""
+        if obj.image_data:
+            import base64
+            from django.utils.html import format_html
+            image_base64 = base64.b64encode(obj.image_data).decode('utf-8')
+            return format_html(
+                '<img src="data:{};base64,{}" style="max-width: 300px; max-height: 300px;" />',
+                obj.image_content_type or 'image/jpeg',
+                image_base64
+            )
+        return "No image"
+    image_preview.short_description = 'Image Preview'

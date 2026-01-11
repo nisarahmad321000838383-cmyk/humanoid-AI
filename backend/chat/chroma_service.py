@@ -35,9 +35,15 @@ class ChromaDBService:
         self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
         
         # Get or create the business collection
-        self.collection = self.client.get_or_create_collection(
+        self.business_collection = self.client.get_or_create_collection(
             name="business_information",
             metadata={"description": "Business information for users"}
+        )
+        
+        # Get or create the products collection
+        self.products_collection = self.client.get_or_create_collection(
+            name="product_information",
+            metadata={"description": "Product information for businesses"}
         )
     
     def add_business(self, business_id: str, business_info: str, username: str) -> bool:
@@ -57,7 +63,7 @@ class ChromaDBService:
             embedding = self.embedding_model.encode(business_info).tolist()
             
             # Add to ChromaDB
-            self.collection.upsert(
+            self.business_collection.upsert(
                 ids=[business_id],
                 embeddings=[embedding],
                 documents=[business_info],
@@ -81,7 +87,7 @@ class ChromaDBService:
         """
         try:
             # Check how many businesses exist in the collection
-            collection_count = self.collection.count()
+            collection_count = self.business_collection.count()
             
             # If no businesses, return empty list
             if collection_count == 0:
@@ -94,7 +100,7 @@ class ChromaDBService:
             query_embedding = self.embedding_model.encode(query).tolist()
             
             # Search in ChromaDB
-            results = self.collection.query(
+            results = self.business_collection.query(
                 query_embeddings=[query_embedding],
                 n_results=actual_n_results
             )
@@ -126,7 +132,7 @@ class ChromaDBService:
             Dictionary containing business information or None
         """
         try:
-            results = self.collection.get(
+            results = self.business_collection.get(
                 ids=[business_id],
                 include=["documents", "metadatas"]
             )
@@ -153,7 +159,7 @@ class ChromaDBService:
             True if successful, False otherwise
         """
         try:
-            self.collection.delete(ids=[business_id])
+            self.business_collection.delete(ids=[business_id])
             return True
         except Exception as e:
             print(f"Error deleting business from ChromaDB: {e}")
@@ -167,7 +173,7 @@ class ChromaDBService:
             List of dictionaries containing business information
         """
         try:
-            results = self.collection.get(
+            results = self.business_collection.get(
                 include=["documents", "metadatas"]
             )
             
@@ -184,6 +190,163 @@ class ChromaDBService:
         except Exception as e:
             print(f"Error getting all businesses from ChromaDB: {e}")
             return []
+    
+    # Product methods
+    def add_product(self, product_id: str, product_description: str, business_id: int, username: str) -> bool:
+        """
+        Add or update product information in ChromaDB.
+        
+        Args:
+            product_id: Unique ID for the product (format: product_{business_id}_{product_pk})
+            product_description: Product description text
+            business_id: ID of the business that owns the product
+            username: Username of the business owner
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Generate embedding
+            embedding = self.embedding_model.encode(product_description).tolist()
+            
+            # Add to ChromaDB
+            self.products_collection.upsert(
+                ids=[product_id],
+                embeddings=[embedding],
+                documents=[product_description],
+                metadatas=[{
+                    "username": username,
+                    "business_id": business_id,
+                    "type": "product"
+                }]
+            )
+            return True
+        except Exception as e:
+            print(f"Error adding product to ChromaDB: {e}")
+            return False
+    
+    def search_products(self, query: str, n_results: int = 5, business_id: Optional[int] = None) -> List[Dict]:
+        """
+        Search for products based on a query.
+        
+        Args:
+            query: Search query text
+            n_results: Number of results to return
+            business_id: Optional business ID to filter results
+            
+        Returns:
+            List of dictionaries containing product information
+        """
+        try:
+            # Check how many products exist in the collection
+            collection_count = self.products_collection.count()
+            
+            # If no products, return empty list
+            if collection_count == 0:
+                return []
+            
+            # Adjust n_results to not exceed available products
+            actual_n_results = min(n_results, collection_count)
+            
+            # Generate query embedding
+            query_embedding = self.embedding_model.encode(query).tolist()
+            
+            # Search in ChromaDB with optional filtering
+            where_filter = {"business_id": business_id} if business_id else None
+            
+            results = self.products_collection.query(
+                query_embeddings=[query_embedding],
+                n_results=actual_n_results,
+                where=where_filter if where_filter else None
+            )
+            
+            # Format results
+            products = []
+            if results and results['documents']:
+                for i in range(len(results['documents'][0])):
+                    products.append({
+                        'id': results['ids'][0][i],
+                        'product_description': results['documents'][0][i],
+                        'username': results['metadatas'][0][i].get('username', 'Unknown'),
+                        'business_id': results['metadatas'][0][i].get('business_id'),
+                        'distance': results['distances'][0][i] if 'distances' in results else None
+                    })
+            
+            return products
+        except Exception as e:
+            print(f"Error searching products in ChromaDB: {e}")
+            return []
+    
+    def get_product(self, product_id: str) -> Optional[Dict]:
+        """
+        Get a specific product by ID.
+        
+        Args:
+            product_id: Unique ID for the product
+            
+        Returns:
+            Dictionary containing product information or None
+        """
+        try:
+            results = self.products_collection.get(
+                ids=[product_id],
+                include=["documents", "metadatas"]
+            )
+            
+            if results and results['documents']:
+                return {
+                    'id': results['ids'][0],
+                    'product_description': results['documents'][0],
+                    'username': results['metadatas'][0].get('username', 'Unknown'),
+                    'business_id': results['metadatas'][0].get('business_id')
+                }
+            return None
+        except Exception as e:
+            print(f"Error getting product from ChromaDB: {e}")
+            return None
+    
+    def delete_product(self, product_id: str) -> bool:
+        """
+        Delete a product from ChromaDB.
+        
+        Args:
+            product_id: Unique ID for the product
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            self.products_collection.delete(ids=[product_id])
+            return True
+        except Exception as e:
+            print(f"Error deleting product from ChromaDB: {e}")
+            return False
+    
+    def delete_products_by_business(self, business_id: int) -> bool:
+        """
+        Delete all products for a specific business from ChromaDB.
+        
+        Args:
+            business_id: ID of the business
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Get all products for this business
+            results = self.products_collection.get(
+                where={"business_id": business_id},
+                include=["metadatas"]
+            )
+            
+            if results and results['ids']:
+                # Delete all matching products
+                self.products_collection.delete(ids=results['ids'])
+            
+            return True
+        except Exception as e:
+            print(f"Error deleting products by business from ChromaDB: {e}")
+            return False
 
 
 # Create a singleton instance

@@ -13,6 +13,11 @@
 }
 
 .modal-content {
+  max-width: 600px;
+}
+
+.business-modal-large {
+  max-width: 900px;
   background: white;
   border-radius: 12px;
   width: 100%;
@@ -345,6 +350,11 @@
 
 @media (max-width: 768px) {
   .modal-content {
+  max-width: 600px;
+}
+
+.business-modal-large {
+  max-width: 900px;
     max-width: 95vw;
     max-height: 95vh;
   }
@@ -367,4 +377,182 @@
   .btn-danger {
     width: 100%;
   }
+}
+
+/* Tabs */
+.modal-tabs {
+  display: flex;
+  border-bottom: 2px solid #e5e7eb;
+  background-color: #f9fafb;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 16px 24px;
+  background: none;
+  border: none;
+  font-size: 15px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+}
+
+.tab-button:hover {
+  color: #374151;
+  background-color: #f3f4f6;
+}
+
+.tab-button.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+  background-color: white;
+}
+
+/* Products Section */
+.products-section {
+  padding: 24px;
+}
+
+.products-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.products-stats {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.stat-item {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.stat-item strong {
+  color: #111827;
+  font-size: 16px;
+}
+
+.stat-positive {
+  color: #059669;
+  font-weight: 500;
+}
+
+.no-products {
+  text-align: center;
+  padding: 48px 24px;
+  color: #6b7280;
+}
+
+.no-products p {
+  font-size: 16px;
+  margin: 0;
+}
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.product-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.product-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.product-images {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  background-color: #f3f4f6;
+}
+
+.product-main-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-no-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.product-image-count {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.product-info {
+  padding: 16px;
+}
+
+.product-description {
+  margin-bottom: 12px;
+  min-height: 60px;
+}
+
+.product-description p {
+  margin: 0 0 4px 0;
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.4;
+}
+
+.product-description p:first-child {
+  font-weight: 600;
+  font-size: 14px;
+  color: #111827;
+}
+
+.product-more {
+  color: #9ca3af !important;
+  font-style: italic;
+}
+
+.product-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-small {
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
+.btn-secondary.btn-small {
+  flex: 1;
+}
+
+.btn-danger.btn-small {
+  flex: 0 0 auto;
 }

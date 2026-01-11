@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { apiService } from '@/services/api';
-import type { Business, BusinessCreateUpdate } from '@/types';
+import type { Business, BusinessCreateUpdate, Product, ProductCreateUpdate, ProductStats } from '@/types';
+import ProductModal from './ProductModal';
 import './BusinessModal.css';
 
 interface BusinessModalProps {
@@ -9,6 +10,7 @@ interface BusinessModalProps {
 }
 
 const BusinessModal = ({ isOpen, onClose }: BusinessModalProps) => {
+  const [activeTab, setActiveTab] = useState<'business' | 'products'>('business');
   const [business, setBusiness] = useState<Business | null>(null);
   const [hasBusiness, setHasBusiness] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -26,11 +28,26 @@ const BusinessModal = ({ isOpen, onClose }: BusinessModalProps) => {
   const [logoError, setLogoError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Product state
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productStats, setProductStats] = useState<ProductStats | null>(null);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [productModalOpen, setProductModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [productMode, setProductMode] = useState<'create' | 'edit'>('create');
+
   useEffect(() => {
     if (isOpen) {
       loadBusiness();
+      loadProducts();
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (activeTab === 'products' && hasBusiness) {
+      loadProducts();
+    }
+  }, [activeTab, hasBusiness]);
 
   const loadBusiness = async () => {
     try {
@@ -188,10 +205,77 @@ const BusinessModal = ({ isOpen, onClose }: BusinessModalProps) => {
     }
   };
 
+  const loadProducts = async () => {
+    if (!hasBusiness) return;
+    
+    try {
+      setProductsLoading(true);
+      const [productsData, statsData] = await Promise.all([
+        apiService.getProducts(),
+        apiService.getProductStats(),
+      ]);
+      
+      setProducts(productsData || []);
+      setProductStats(statsData);
+    } catch (err: any) {
+      console.error('Failed to load products:', err);
+      setProducts([]); // Set empty array on error
+      // Don't show error for 404 (no business yet)
+      if (err.response?.status !== 404) {
+        setError('Failed to load products. Please try again.');
+      }
+    } finally {
+      setProductsLoading(false);
+    }
+  };
+
+  const handleCreateProduct = () => {
+    setSelectedProduct(null);
+    setProductMode('create');
+    setProductModalOpen(true);
+  };
+
+  const handleEditProduct = (product: Product) => {
+    setSelectedProduct(product);
+    setProductMode('edit');
+    setProductModalOpen(true);
+  };
+
+  const handleDeleteProduct = async (productId: number) => {
+    if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await apiService.deleteProduct(productId);
+      setSuccess('Product deleted successfully!');
+      await loadProducts();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to delete product');
+    }
+  };
+
+  const handleProductSubmit = async (data: ProductCreateUpdate) => {
+    try {
+      if (productMode === 'create') {
+        await apiService.createProduct(data);
+        setSuccess('Product created successfully!');
+      } else if (selectedProduct) {
+        await apiService.updateProduct(selectedProduct.id, data);
+        setSuccess('Product updated successfully!');
+      }
+      await loadProducts();
+      setProductModalOpen(false);
+    } catch (err: any) {
+      throw err; // Let ProductModal handle the error display
+    }
+  };
+
   const handleClose = () => {
     setError(null);
     setSuccess(null);
     setLogoError(null);
+    setActiveTab('business');
     onClose();
   };
 
@@ -202,11 +286,29 @@ const BusinessModal = ({ isOpen, onClose }: BusinessModalProps) => {
 
   return (
     <div className="modal-overlay" onClick={handleClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content business-modal-large" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Your Business</h2>
           <button className="modal-close" onClick={handleClose}>&times;</button>
         </div>
+
+        {/* Tabs */}
+        {hasBusiness && (
+          <div className="modal-tabs">
+            <button
+              className={`tab-button ${activeTab === 'business' ? 'active' : ''}`}
+              onClick={() => setActiveTab('business')}
+            >
+              Business Info
+            </button>
+            <button
+              className={`tab-button ${activeTab === 'products' ? 'active' : ''}`}
+              onClick={() => setActiveTab('products')}
+            >
+              Your Products {productStats && `(${productStats.total_products}/10)`}
+            </button>
+          </div>
+        )}
 
         {loading ? (
           <div className="modal-body">
@@ -228,7 +330,7 @@ const BusinessModal = ({ isOpen, onClose }: BusinessModalProps) => {
               </div>
             )}
 
-            {!isEditing && hasBusiness && business ? (
+            {activeTab === 'business' && !isEditing && hasBusiness && business ? (
               <div className="business-view">
                 {logoPreview && (
                   <div className="business-logo-display">
@@ -262,7 +364,7 @@ const BusinessModal = ({ isOpen, onClose }: BusinessModalProps) => {
                   </button>
                 </div>
               </div>
-            ) : (
+            ) : activeTab === 'business' ? (
               <form onSubmit={handleSubmit} className="business-form">
                 <div className="form-help-header">
                   Write about your business name, owner, address, and industry (what you produce/buy/sell) in up to 10 lines.
@@ -348,9 +450,104 @@ const BusinessModal = ({ isOpen, onClose }: BusinessModalProps) => {
                   </button>
                 </div>
               </form>
-            )}
+            ) : activeTab === 'products' ? (
+              <div className="products-section">
+                {productsLoading ? (
+                  <div className="loading">Loading products...</div>
+                ) : (
+                  <>
+                    <div className="products-header">
+                      <div className="products-stats">
+                        {productStats && (
+                          <>
+                            <span className="stat-item">
+                              <strong>{productStats.total_products}</strong> / {productStats.max_products} products
+                            </span>
+                            {productStats.remaining_slots > 0 && (
+                              <span className="stat-item stat-positive">
+                                {productStats.remaining_slots} slot{productStats.remaining_slots !== 1 ? 's' : ''} available
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      <button
+                        className="btn-primary"
+                        onClick={handleCreateProduct}
+                        disabled={!productStats?.can_add_more}
+                      >
+                        {productStats?.can_add_more ? '+ Add Product' : 'Maximum Products Reached'}
+                      </button>
+                    </div>
+
+                    {products.length === 0 ? (
+                      <div className="no-products">
+                        <p>No products yet. Add your first product to get started!</p>
+                      </div>
+                    ) : (
+                      <div className="products-grid">
+                        {products.map((product) => (
+                          <div key={product.id} className="product-card">
+                            <div className="product-images">
+                              {product.images.length > 0 ? (
+                                <img
+                                  src={`data:${product.images[0].image_content_type};base64,${product.images[0].image_base64}`}
+                                  alt="Product"
+                                  className="product-main-image"
+                                />
+                              ) : (
+                                <div className="product-no-image">No Image</div>
+                              )}
+                              {product.images.length > 1 && (
+                                <div className="product-image-count">
+                                  +{product.images.length - 1} more
+                                </div>
+                              )}
+                            </div>
+                            <div className="product-info">
+                              <div className="product-description">
+                                {product.product_description.split('\n').slice(0, 3).map((line, idx) => (
+                                  <p key={idx}>{line}</p>
+                                ))}
+                                {product.product_description.split('\n').length > 3 && (
+                                  <p className="product-more">...</p>
+                                )}
+                              </div>
+                              <div className="product-actions">
+                                <button
+                                  className="btn-secondary btn-small"
+                                  onClick={() => handleEditProduct(product)}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  className="btn-danger btn-small"
+                                  onClick={() => handleDeleteProduct(product.id)}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            ) : null}
           </div>
         )}
+
+        {/* Product Modal */}
+        <ProductModal
+          isOpen={productModalOpen}
+          onClose={() => setProductModalOpen(false)}
+          onSubmit={handleProductSubmit}
+          product={selectedProduct}
+          mode={productMode}
+          remainingSlots={productStats?.remaining_slots || 0}
+        />
       </div>
     </div>
   );

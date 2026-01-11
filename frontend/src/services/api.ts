@@ -15,6 +15,9 @@ import type {
   Business,
   BusinessCreateUpdate,
   BusinessResponse,
+  Product,
+  ProductCreateUpdate,
+  ProductStats,
 } from '@/types';
 
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -211,6 +214,45 @@ class ApiService {
 
   async deleteBusiness(): Promise<{ message: string }> {
     const response = await this.api.delete('/auth/business/');
+    return response.data;
+  }
+
+  // Product endpoints
+  async getProducts(): Promise<Product[]> {
+    const response = await this.api.get<Product[]>('/auth/products/');
+    return response.data;
+  }
+
+  async getProductStats(): Promise<ProductStats> {
+    const response = await this.api.get<ProductStats>('/auth/products/stats/');
+    return response.data;
+  }
+
+  async createProduct(data: ProductCreateUpdate): Promise<{ message: string; product: Product }> {
+    const response = await this.api.post('/auth/products/', data);
+    return response.data;
+  }
+
+  async updateProduct(id: number, data: ProductCreateUpdate): Promise<{ message: string; product: Product }> {
+    const response = await this.api.put(`/auth/products/${id}/`, data);
+    return response.data;
+  }
+
+  async deleteProduct(id: number): Promise<{ message: string }> {
+    const response = await this.api.delete(`/auth/products/${id}/`);
+    return response.data;
+  }
+
+  async searchProducts(query: string, n_results?: number, business_id?: number): Promise<{
+    query: string;
+    results: any[];
+    count: number;
+  }> {
+    const response = await this.api.post('/auth/products/search/', {
+      query,
+      n_results: n_results || 5,
+      business_id
+    });
     return response.data;
   }
 }

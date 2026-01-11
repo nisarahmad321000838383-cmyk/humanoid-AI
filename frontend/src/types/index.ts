@@ -128,3 +128,37 @@ export interface BusinessResponse {
   business?: Business;
   message?: string;
 }
+
+export interface ProductImage {
+  id: number;
+  product: number;
+  image_base64: string;
+  image_filename: string;
+  image_content_type: string;
+  order: number;
+  created_at: string;
+}
+
+export interface Product {
+  id: number;
+  business: number;
+  product_description: string;
+  images: ProductImage[];
+  images_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductCreateUpdate {
+  product_description: string;
+  images: string[]; // base64 encoded images (data:image/png;base64,...)
+}
+
+export interface ProductStats {
+  has_business: boolean;
+  total_products: number;
+  max_products: number;
+  remaining_slots: number;
+  can_add_more: boolean;
+  message?: string;
+}
