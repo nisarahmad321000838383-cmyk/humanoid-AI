@@ -22,6 +22,16 @@ const ProductCard = ({ product }: ProductCardProps) => {
     );
   };
 
+  // Format base64 image data with proper data URI prefix
+  const getImageSrc = (imageBase64: string, contentType: string) => {
+    // If already has data: prefix, return as is
+    if (imageBase64.startsWith('data:')) {
+      return imageBase64;
+    }
+    // Otherwise, add the prefix
+    return `data:${contentType};base64,${imageBase64}`;
+  };
+
   // Parse product description to extract name, price, and details
   const lines = product.product_description.split('\n').filter(line => line.trim());
   const productName = lines[0]?.replace(/^Product Name:\s*/i, '').trim() || 'Product';
@@ -35,7 +45,10 @@ const ProductCard = ({ product }: ProductCardProps) => {
         {product.images.length > 0 ? (
           <>
             <img 
-              src={product.images[currentImageIndex].image_base64} 
+              src={getImageSrc(
+                product.images[currentImageIndex].image_base64,
+                product.images[currentImageIndex].image_content_type
+              )} 
               alt={productName}
               className="product-image"
             />
