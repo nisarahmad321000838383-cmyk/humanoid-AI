@@ -98,21 +98,21 @@ const ChatArea = ({ isSidebarOpen, onToggleSidebar }: ChatAreaProps) => {
             <div className="example-prompts">
               <button
                 className="example-prompt"
-                onClick={() => setInput('What is quantum computing?')}
+                onClick={() => setInput('I need a Laptop!')}
               >
-                What is quantum computing?
+                I need a Laptop!
               </button>
               <button
                 className="example-prompt"
-                onClick={() => setInput('Explain machine learning in simple terms')}
+                onClick={() => setInput('I want to buy a Smartphone!')}
               >
-                Explain machine learning
+                I want to buy a Smartphone!
               </button>
               <button
                 className="example-prompt"
-                onClick={() => setInput('How does blockchain work?')}
+                onClick={() => setInput('tell me what is computer programming?')}
               >
-                How does blockchain work?
+                I want to learn programming!
               </button>
             </div>
           </div>
