@@ -175,6 +175,41 @@
   cursor: not-allowed;
 }
 
+/* Loading more indicator */
+.loading-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem 0.75rem;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+.loading-more .spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* End of list message */
+.end-of-list {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 0.75rem;
+  color: var(--color-text-tertiary);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
 .sidebar-footer {
   border-top: 1px solid var(--color-border);
   padding: 1rem;

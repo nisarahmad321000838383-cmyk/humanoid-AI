@@ -122,14 +122,32 @@ class ApiService {
   }
 
   // Chat endpoints
-  async getConversations(): Promise<ConversationListItem[]> {
-    const response = await this.api.get<any>('/chat/conversations/');
+  async getConversations(page: number = 1): Promise<{
+    results: ConversationListItem[];
+    count: number;
+    next: string | null;
+    previous: string | null;
+  }> {
+    const response = await this.api.get<any>('/chat/conversations/', {
+      params: { page }
+    });
     // Handle paginated response from DRF
     if (response.data && typeof response.data === 'object' && 'results' in response.data) {
-      return response.data.results;
+      return {
+        results: response.data.results,
+        count: response.data.count || response.data.results.length,
+        next: response.data.next || null,
+        previous: response.data.previous || null,
+      };
     }
-    // Handle non-paginated response (array)
-    return Array.isArray(response.data) ? response.data : [];
+    // Handle non-paginated response (array) - backwards compatibility
+    const results = Array.isArray(response.data) ? response.data : [];
+    return {
+      results,
+      count: results.length,
+      next: null,
+      previous: null,
+    };
   }
 
   async getConversation(id: number): Promise<Conversation> {

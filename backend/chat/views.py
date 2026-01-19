@@ -1,6 +1,7 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
 from .models import Conversation, Message
 from .serializers import (
@@ -12,11 +13,22 @@ from .serializers import (
 from .services import HuggingFaceService
 
 
+class ConversationPagination(PageNumberPagination):
+    """
+    Pagination class for conversations with 10 items per page.
+    """
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 50
+
+
 class ConversationListCreateView(generics.ListCreateAPIView):
     """
     API endpoint to list all conversations or create a new one.
+    Supports pagination with 10 conversations per page.
     """
     permission_classes = (IsAuthenticated,)
+    pagination_class = ConversationPagination
     
     def get_serializer_class(self):
         if self.request.method == 'GET':
@@ -24,7 +36,7 @@ class ConversationListCreateView(generics.ListCreateAPIView):
         return ConversationSerializer
     
     def get_queryset(self):
-        return Conversation.objects.filter(user=self.request.user)
+        return Conversation.objects.filter(user=self.request.user).order_by('-updated_at')
     
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

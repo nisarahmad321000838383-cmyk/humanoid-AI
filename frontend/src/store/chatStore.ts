@@ -9,7 +9,11 @@ interface ChatState {
   isLoading: boolean;
   isSending: boolean;
   error: string | null;
-  loadConversations: () => Promise<void>;
+  currentPage: number;
+  hasMore: boolean;
+  totalCount: number;
+  loadConversations: (page?: number) => Promise<void>;
+  loadMoreConversations: () => Promise<void>;
   loadConversation: (id: number) => Promise<void>;
   sendMessage: (message: string, conversationId?: number, deepDive?: boolean) => Promise<void>;
   deleteConversation: (id: number) => Promise<void>;
@@ -24,15 +28,48 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoading: false,
   isSending: false,
   error: null,
+  currentPage: 1,
+  hasMore: true,
+  totalCount: 0,
 
-  loadConversations: async () => {
+  loadConversations: async (page = 1) => {
     set({ isLoading: true, error: null });
     try {
-      const conversations = await apiService.getConversations();
-      set({ conversations, isLoading: false });
+      const response = await apiService.getConversations(page);
+      set({ 
+        conversations: response.results, 
+        currentPage: page,
+        hasMore: response.next !== null,
+        totalCount: response.count,
+        isLoading: false 
+      });
     } catch (error: any) {
       set({
         error: error.response?.data?.error || 'Failed to load conversations',
+        isLoading: false,
+      });
+    }
+  },
+
+  loadMoreConversations: async () => {
+    const { currentPage, hasMore, isLoading, conversations } = get();
+    
+    if (!hasMore || isLoading) return;
+    
+    set({ isLoading: true, error: null });
+    try {
+      const nextPage = currentPage + 1;
+      const response = await apiService.getConversations(nextPage);
+      set({ 
+        conversations: [...conversations, ...response.results],
+        currentPage: nextPage,
+        hasMore: response.next !== null,
+        totalCount: response.count,
+        isLoading: false 
+      });
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.error || 'Failed to load more conversations',
         isLoading: false,
       });
     }

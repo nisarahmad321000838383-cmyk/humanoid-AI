@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { useChatStore } from '@/store/chatStore';
@@ -13,6 +13,7 @@ import {
   User,
   Shield,
   Settings as SettingsIcon,
+  Loader2,
 } from 'lucide-react';
 import './Sidebar.css';
 
@@ -30,8 +31,24 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
     createNewConversation,
     loadConversation,
     deleteConversation,
+    loadMoreConversations,
+    hasMore,
+    isLoading,
   } = useChatStore();
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const lastConversationRef = useCallback((node: HTMLDivElement | null) => {
+    if (isLoading) return;
+    if (observerRef.current) observerRef.current.disconnect();
+    
+    observerRef.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        loadMoreConversations();
+      }
+    });
+    
+    if (node) observerRef.current.observe(node);
+  }, [isLoading, hasMore, loadMoreConversations]);
 
   const handleLogout = async () => {
     await logout();
@@ -88,35 +105,56 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
           </button>
 
           <div className="conversations-list">
-            {conversations.map((conv) => (
-              <div
-                key={conv.id}
-                className={`conversation-item ${
-                  currentConversation?.id === conv.id ? 'active' : ''
-                }`}
-                onClick={() => loadConversation(conv.id)}
-              >
-                <div className="conversation-icon">
-                  <MessageSquare size={18} />
+            {conversations.map((conv, index) => {
+              // Attach ref to the last conversation item for infinite scroll
+              const isLastItem = index === conversations.length - 1;
+              
+              return (
+                <div
+                  key={conv.id}
+                  ref={isLastItem ? lastConversationRef : null}
+                  className={`conversation-item ${
+                    currentConversation?.id === conv.id ? 'active' : ''
+                  }`}
+                  onClick={() => loadConversation(conv.id)}
+                >
+                  <div className="conversation-icon">
+                    <MessageSquare size={18} />
+                  </div>
+                  {isOpen && (
+                    <>
+                      <div className="conversation-content">
+                        <div className="conversation-title">{conv.title}</div>
+                        <div className="conversation-date">{formatDate(conv.updated_at)}</div>
+                      </div>
+                      <button
+                        className="delete-button"
+                        onClick={(e) => handleDeleteConversation(conv.id, e)}
+                        disabled={deletingId === conv.id}
+                        title="Delete conversation"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </>
+                  )}
                 </div>
-                {isOpen && (
-                  <>
-                    <div className="conversation-content">
-                      <div className="conversation-title">{conv.title}</div>
-                      <div className="conversation-date">{formatDate(conv.updated_at)}</div>
-                    </div>
-                    <button
-                      className="delete-button"
-                      onClick={(e) => handleDeleteConversation(conv.id, e)}
-                      disabled={deletingId === conv.id}
-                      title="Delete conversation"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </>
-                )}
+              );
+            })}
+            
+            {/* Loading indicator when fetching more conversations */}
+            {isLoading && hasMore && (
+              <div className="loading-more">
+                <Loader2 size={20} className="spinner" />
+                {isOpen && <span>Loading more...</span>}
               </div>
-            ))}
+            )}
+            
+            {/* End of list message */}
+            {!hasMore && conversations.length > 0 && isOpen && (
+              <div className="end-of-list">
+                <span>No more conversations</span>
+              </div>
+            )}
           </div>
         </div>
 
